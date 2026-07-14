@@ -7,6 +7,7 @@ const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
 assert.equal(existsSync("prisma/migrations/20260714223000_initial/migration.sql"), true);
 assert.equal(existsSync("ecosystem.config.cjs"), true);
+assert.match(readFileSync("next.config.ts", "utf8"), /output:\s*["']standalone["']/);
 assert.match(envExample, /DATABASE_URL=postgresql:\/\//);
 assert.match(envExample, /SEED_OWNER_PASSWORD=/);
 assert.doesNotMatch(envExample, /SESSION_SECRET=/);

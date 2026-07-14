@@ -39,6 +39,16 @@ pm2 start ecosystem.config.cjs
 pm2 save
 ```
 
+## Artifact Deploy For Shared Hosting
+
+If shared hosting cannot build Next.js because of resource limits, build locally/CI and upload `.next/standalone`, `.next/static`, `public` if present, `prisma`, and `.env` to the staging app folder. Start with:
+
+```bash
+source /opt/alt/alt-nodejs22/enable
+cd /home/u779371263/apps/fn-kasir-link-staging
+PORT=3000 HOSTNAME=127.0.0.1 node server.js
+```
+
 ## Update Deploy
 
 ```bash
