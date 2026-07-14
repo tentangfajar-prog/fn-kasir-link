@@ -26,7 +26,9 @@
     "check:sprint13": "tsx scripts/sprint13-self-check.ts",
     "check:sprint14": "tsx scripts/sprint14-self-check.ts",
     "check:sprint15": "tsx scripts/sprint15-self-check.ts",
-    "check:rc": "npm run prisma:generate && npm run typecheck && npm run build && npm run lint && npm run check:sprint01 && npm run check:sprint02 && npm run check:sprint03 && npm run check:sprint04 && npm run check:sprint05 && npm run check:sprint06 && npm run check:sprint07 && npm run check:sprint08 && npm run check:sprint09 && npm run check:sprint10 && npm run check:sprint11 && npm run check:sprint12 && npm run check:sprint13 && npm run check:sprint14 && npm run check:sprint15"
+    "check:sprint16": "tsx scripts/sprint16-self-check.ts",
+    "preflight:production": "tsx scripts/production-preflight.ts",
+    "check:rc": "npm run prisma:generate && npm run typecheck && npm run build && npm run lint && npm run check:sprint01 && npm run check:sprint02 && npm run check:sprint03 && npm run check:sprint04 && npm run check:sprint05 && npm run check:sprint06 && npm run check:sprint07 && npm run check:sprint08 && npm run check:sprint09 && npm run check:sprint10 && npm run check:sprint11 && npm run check:sprint12 && npm run check:sprint13 && npm run check:sprint14 && npm run check:sprint15 && npm run check:sprint16 && npm run preflight:production"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
