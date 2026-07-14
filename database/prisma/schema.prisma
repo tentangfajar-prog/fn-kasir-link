@@ -1,0 +1,1678 @@
+// FN Kasir Link — Prisma Schema Draft V1
+// Status: DRAFT BASELINE
+// This schema is a technical draft generated from V1 business rules.
+// Money is represented as BigInt for safety.
+// Quantities use Decimal.
+// Final implementation must be reviewed before production migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Domain {
+  GLOBAL
+  WARUNG
+  BRILINK
+  ABSENSI
+  SYSTEM
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+enum PartnerType {
+  supplier
+  consignment
+  both
+}
+
+enum Effect {
+  allow
+  deny
+}
+
+enum DocumentDomain {
+  WARUNG
+  BRILINK
+}
+
+enum Direction {
+  in
+  out
+}
+
+enum TransactionStatus {
+  selesai
+  dibatalkan
+}
+
+enum PaymentCategory {
+  cash
+  non_cash
+}
+
+enum WarungCashAccount {
+  kas_laci
+  kas_aman
+}
+
+enum PurchasePaymentStatus {
+  paid_cash
+  supplier_debt
+}
+
+enum DebtStatus {
+  belum_lunas
+  lunas_sebagian
+  lunas
+}
+
+enum ConsignmentPaymentStatus {
+  belum_dibayar
+  dibayar_sebagian
+  dibayar
+}
+
+enum SellableItemType {
+  normal
+  recipe
+  bundle
+  consignment
+}
+
+enum PriceMode {
+  manual
+  auto_hpp_profit
+}
+
+enum StockMovementType {
+  purchase
+  sale
+  composition_sale
+  stock_opname
+  expired_return
+  consignment_in
+  consignment_sale
+  consignment_return
+  reversal
+  adjustment
+}
+
+enum StockOpnameMode {
+  single_product
+  table
+}
+
+enum StockOpnameStatus {
+  draft
+  posted
+  cancelled
+}
+
+enum BankCategory {
+  none
+  sesama_bri
+  antar_bank
+}
+
+enum BrilinkAccount {
+  cash
+  saldo
+}
+
+enum TemporaryFundStatus {
+  aktif
+  dikembalikan
+  dibatalkan
+}
+
+enum FeeLedgerDirection {
+  income
+  reversal
+}
+
+enum ClosingStatus {
+  closed
+}
+
+enum AttendanceRecordStatus {
+  valid
+  belum_checkout
+  dikoreksi
+  dibatalkan
+}
+
+enum AttendancePointStatus {
+  valid
+  outside_radius
+  gps_unavailable
+  invalid_qr
+  belum_checkout
+}
+
+enum AdjustmentStatus {
+  selesai
+  dibatalkan
+}
+
+enum PrintFormat {
+  thermal_58
+  thermal_80
+  a4_pdf
+}
+
+// ============================================================
+// GLOBAL TABLES
+// ============================================================
+
+model User {
+  id                  String      @id @default(uuid()) @db.Uuid
+  roleId              String      @db.Uuid
+  role                Role        @relation(fields: [roleId], references: [id])
+  name                String
+  username            String      @unique
+  phone               String?
+  email               String?
+  passwordHash        String
+  status              UserStatus  @default(active)
+  mustChangePassword  Boolean     @default(false)
+
+  lastLoginAt         DateTime?
+  createdAt           DateTime    @default(now())
+  createdBy           String?     @db.Uuid
+  updatedAt           DateTime    @updatedAt
+  updatedBy           String?     @db.Uuid
+  deletedAt           DateTime?
+  deletedBy           String?     @db.Uuid
+
+  permissionOverrides UserPermissionOverride[]
+  auditLogs           AuditLog[]
+  loginHistory        LoginHistory[]
+  deviceHistory       DeviceHistory[]
+  attendanceRecords   AttendanceRecord[]
+
+  @@index([roleId])
+  @@index([status])
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  code        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  createdBy   String?  @db.Uuid
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?  @db.Uuid
+
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id           String   @id @default(uuid()) @db.Uuid
+  module       String
+  code         String   @unique
+  name         String
+  description  String?
+  isSensitive  Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  roles        RolePermission[]
+  userOverrides UserPermissionOverride[]
+
+  @@index([module])
+  @@index([isSensitive])
+}
+
+model RolePermission {
+  id           String      @id @default(uuid()) @db.Uuid
+  roleId       String      @db.Uuid
+  permissionId String      @db.Uuid
+  allow        Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  createdBy    String?     @db.Uuid
+
+  role         Role        @relation(fields: [roleId], references: [id])
+  permission   Permission  @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model UserPermissionOverride {
+  id           String      @id @default(uuid()) @db.Uuid
+  userId       String      @db.Uuid
+  permissionId String      @db.Uuid
+  effect       Effect
+  reason       String?
+  createdAt    DateTime    @default(now())
+  createdBy    String?     @db.Uuid
+  updatedAt    DateTime    @updatedAt
+  updatedBy    String?     @db.Uuid
+
+  user         User        @relation(fields: [userId], references: [id])
+  permission   Permission  @relation(fields: [permissionId], references: [id])
+
+  @@unique([userId, permissionId])
+}
+
+model Partner {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String
+  phone       String?
+  address     String?
+  notes       String?
+  partnerType PartnerType
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  createdBy   String?     @db.Uuid
+  updatedAt   DateTime    @updatedAt
+  updatedBy   String?     @db.Uuid
+  deletedAt   DateTime?
+  deletedBy   String?     @db.Uuid
+
+  warungPurchases              WarungPurchase[]
+  warungSupplierDebts          WarungSupplierDebt[]
+  warungConsignmentProducts    WarungConsignmentProduct[]
+  warungConsignmentEntries     WarungConsignmentEntry[]
+  brilinkConsignmentProducts   BrilinkConsignmentProduct[]
+  brilinkConsignmentEntries    BrilinkConsignmentEntry[]
+
+  @@index([name])
+  @@index([partnerType])
+  @@index([isActive])
+}
+
+model Setting {
+  id          String   @id @default(uuid()) @db.Uuid
+  scope       String
+  key         String
+  value       Json
+  description String?
+  isSensitive Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  createdBy   String?  @db.Uuid
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?  @db.Uuid
+
+  @@unique([scope, key])
+  @@index([scope])
+}
+
+model DocumentSequence {
+  id           String         @id @default(uuid()) @db.Uuid
+  domain       DocumentDomain
+  sequenceDate DateTime       @db.Date
+  lastNumber   Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([domain, sequenceDate])
+}
+
+model AuditLog {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String?  @db.Uuid
+  user               User?    @relation(fields: [userId], references: [id])
+  userNameSnapshot   String?
+  roleSnapshot       String?
+  domain             Domain
+  module             String
+  action             String
+  entityType         String
+  entityId           String?  @db.Uuid
+  entityNo           String?
+  oldValue           Json?
+  newValue           Json?
+  ipAddress          String?
+  deviceInfo         String?
+  createdAt          DateTime @default(now())
+
+  @@index([userId])
+  @@index([domain])
+  @@index([module])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Attachment {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityType  String
+  entityId    String   @db.Uuid
+  fileName    String
+  fileType    String
+  fileSize    Int
+  storagePath String
+  uploadedBy  String   @db.Uuid
+  uploadedAt  DateTime @default(now())
+  isActive    Boolean  @default(true)
+  deletedAt   DateTime?
+  deletedBy   String?  @db.Uuid
+
+  @@index([entityType, entityId])
+}
+
+model PrintLog {
+  id                    String      @id @default(uuid()) @db.Uuid
+  entityType            String
+  entityId              String      @db.Uuid
+  documentNo            String?
+  printFormat           PrintFormat
+  printedBy             String      @db.Uuid
+  printedByNameSnapshot String?
+  printedAt             DateTime    @default(now())
+  printCount            Int         @default(1)
+  deviceInfo            String?
+  ipAddress             String?
+
+  @@index([entityType, entityId])
+  @@index([documentNo])
+  @@index([printedAt])
+}
+
+model LoginHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String?  @db.Uuid
+  user          User?    @relation(fields: [userId], references: [id])
+  usernameInput String
+  status        String
+  failureReason String?
+  ipAddress     String?
+  deviceInfo    String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model DeviceHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id])
+  deviceHash    String
+  deviceInfo    String
+  firstSeenAt   DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  lastIpAddress String?
+  isTrusted     Boolean  @default(false)
+
+  @@unique([userId, deviceHash])
+}
+
+// ============================================================
+// WARUNG MASTER, STOCK, POS
+// ============================================================
+
+model WarungUnit {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String
+  code              String   @unique
+  isDecimalAllowed  Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  createdBy         String?  @db.Uuid
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?  @db.Uuid
+  deletedAt         DateTime?
+  deletedBy         String?  @db.Uuid
+
+  stockProducts     WarungStockProduct[]
+  conversionsFrom   WarungProductUnitConversion[] @relation("ConversionFromUnit")
+  conversionsTo     WarungProductUnitConversion[] @relation("ConversionToUnit")
+}
+
+model WarungProductCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  code        String   @unique
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  createdBy   String?  @db.Uuid
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?  @db.Uuid
+  deletedAt   DateTime?
+  deletedBy   String?  @db.Uuid
+
+  sellableItems WarungSellableItem[]
+}
+
+model WarungStockProduct {
+  id                 String   @id @default(uuid()) @db.Uuid
+  name               String
+  baseUnitId         String   @db.Uuid
+  baseUnit           WarungUnit @relation(fields: [baseUnitId], references: [id])
+  sku                String?
+  barcode            String?
+  minStockQty        Decimal  @default(5) @db.Decimal(18, 3)
+  currentStockQty    Decimal  @default(0) @db.Decimal(18, 3)
+  currentHppAmount   BigInt   @default(0)
+  isActive           Boolean  @default(true)
+  notes              String?
+  createdAt          DateTime @default(now())
+  createdBy          String?  @db.Uuid
+  updatedAt          DateTime @updatedAt
+  updatedBy          String?  @db.Uuid
+  deletedAt          DateTime?
+  deletedBy          String?  @db.Uuid
+
+  sellableItems      WarungSellableItem[]
+  conversions        WarungProductUnitConversion[]
+  componentOf        WarungItemComposition[]
+  stockMovements     WarungStockMovement[]
+  purchaseItems      WarungPurchaseItem[]
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model WarungProductUnitConversion {
+  id              String   @id @default(uuid()) @db.Uuid
+  stockProductId  String   @db.Uuid
+  stockProduct    WarungStockProduct @relation(fields: [stockProductId], references: [id])
+  fromUnitId      String   @db.Uuid
+  fromUnit        WarungUnit @relation("ConversionFromUnit", fields: [fromUnitId], references: [id])
+  toUnitId        String   @db.Uuid
+  toUnit          WarungUnit @relation("ConversionToUnit", fields: [toUnitId], references: [id])
+  conversionQty   Decimal  @db.Decimal(18, 6)
+  versionNo       Int      @default(1)
+  effectiveFrom   DateTime @default(now())
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  createdBy       String?  @db.Uuid
+  updatedAt       DateTime @updatedAt
+  updatedBy       String?  @db.Uuid
+
+  @@index([stockProductId])
+  @@index([fromUnitId, toUnitId])
+}
+
+model WarungSellableItem {
+  id                   String           @id @default(uuid()) @db.Uuid
+  itemType             SellableItemType
+  stockProductId       String?          @db.Uuid
+  stockProduct         WarungStockProduct? @relation(fields: [stockProductId], references: [id])
+  consignmentProductId String?          @db.Uuid
+  consignmentProduct   WarungConsignmentProduct? @relation(fields: [consignmentProductId], references: [id])
+  categoryId           String           @db.Uuid
+  category             WarungProductCategory @relation(fields: [categoryId], references: [id])
+  name                 String
+  sku                  String?
+  barcode              String?
+  sellingPriceAmount   BigInt
+  priceMode            PriceMode        @default(manual)
+  targetProfitAmount   BigInt?
+  roundingRule         String?
+  isFavorite           Boolean          @default(false)
+  isActive             Boolean          @default(true)
+  sortOrder            Int              @default(0)
+  notes                String?
+  createdAt            DateTime         @default(now())
+  createdBy            String?          @db.Uuid
+  updatedAt            DateTime         @updatedAt
+  updatedBy            String?          @db.Uuid
+  deletedAt            DateTime?
+  deletedBy            String?          @db.Uuid
+
+  compositions         WarungItemComposition[]
+  saleItems            WarungSaleItem[]
+
+  @@index([name])
+  @@index([categoryId])
+  @@index([isFavorite])
+  @@index([isActive])
+}
+
+model WarungItemComposition {
+  id                 String   @id @default(uuid()) @db.Uuid
+  sellableItemId     String   @db.Uuid
+  sellableItem       WarungSellableItem @relation(fields: [sellableItemId], references: [id])
+  componentProductId String   @db.Uuid
+  componentProduct   WarungStockProduct @relation(fields: [componentProductId], references: [id])
+  qty                Decimal  @db.Decimal(18, 3)
+  unitId             String   @db.Uuid
+  qtyBase            Decimal  @db.Decimal(18, 3)
+  baseUnitId         String   @db.Uuid
+  sortOrder          Int      @default(0)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  createdBy          String?  @db.Uuid
+  updatedAt          DateTime @updatedAt
+  updatedBy          String?  @db.Uuid
+
+  @@index([sellableItemId])
+  @@index([componentProductId])
+}
+
+model WarungPaymentMethod {
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String
+  code        String          @unique
+  category    PaymentCategory
+  isActive    Boolean         @default(true)
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  createdBy   String?         @db.Uuid
+  updatedAt   DateTime        @updatedAt
+  updatedBy   String?         @db.Uuid
+  deletedAt   DateTime?
+  deletedBy   String?         @db.Uuid
+
+  sales       WarungSale[]
+}
+
+model WarungSale {
+  id                         String            @id @default(uuid()) @db.Uuid
+  documentNo                 String            @unique
+  operationalDate            DateTime          @db.Date
+  cashierUserId              String            @db.Uuid
+  cashierNameSnapshot        String
+  cashierRoleSnapshot        String
+  paymentMethodId            String            @db.Uuid
+  paymentMethod              WarungPaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  paymentMethodNameSnapshot  String
+  paymentCategorySnapshot    PaymentCategory
+  subtotalAmount             BigInt
+  itemDiscountAmount         BigInt            @default(0)
+  transactionDiscountAmount  BigInt            @default(0)
+  totalDiscountAmount        BigInt            @default(0)
+  totalAmount                BigInt
+  cashReceivedAmount         BigInt?
+  changeAmount               BigInt?
+  status                     TransactionStatus @default(selesai)
+  reversalOfSaleId           String?           @db.Uuid
+  reversedBySaleId           String?           @db.Uuid
+  cancellationReason         String?
+  cancelledAt                DateTime?
+  cancelledBy                String?           @db.Uuid
+  createdAt                  DateTime          @default(now())
+  createdBy                  String            @db.Uuid
+  updatedAt                  DateTime          @updatedAt
+
+  items                      WarungSaleItem[]
+  cashLedgers                WarungCashLedger[]
+  nonCashLedgers             WarungNonCashLedger[]
+  consignmentSales           WarungConsignmentSale[]
+
+  @@index([operationalDate])
+  @@index([cashierUserId])
+  @@index([status])
+}
+
+model WarungSaleItem {
+  id                          String   @id @default(uuid()) @db.Uuid
+  saleId                      String   @db.Uuid
+  sale                        WarungSale @relation(fields: [saleId], references: [id])
+  sellableItemId              String   @db.Uuid
+  sellableItem                WarungSellableItem @relation(fields: [sellableItemId], references: [id])
+  sellableItemNameSnapshot    String
+  itemTypeSnapshot            SellableItemType
+  categoryNameSnapshot        String
+  qty                         Decimal  @db.Decimal(18, 3)
+  unitNameSnapshot            String?
+  qtyBase                     Decimal? @db.Decimal(18, 3)
+  sellingPriceSnapshot        BigInt
+  hppSnapshotAmount           BigInt?
+  grossAmount                 BigInt
+  discountAmount              BigInt   @default(0)
+  netAmount                   BigInt
+  profitAmount                BigInt
+  compositionSnapshot         Json?
+  consignmentPartnerId        String?  @db.Uuid
+  consignmentPartnerSnapshot  String?
+  consignmentSetorAmount      BigInt?
+  createdAt                   DateTime @default(now())
+
+  consignmentSale             WarungConsignmentSale?
+
+  @@index([saleId])
+  @@index([sellableItemId])
+}
+
+model WarungCashLedger {
+  id                   String            @id @default(uuid()) @db.Uuid
+  cashAccount           WarungCashAccount
+  direction             Direction
+  amount                BigInt
+  balanceBeforeAmount   BigInt?
+  balanceAfterAmount    BigInt?
+  sourceType            String
+  sourceId              String            @db.Uuid
+  documentNo            String
+  operationalDate       DateTime          @db.Date
+  description           String?
+  createdAt             DateTime          @default(now())
+  createdBy             String            @db.Uuid
+
+  sale                  WarungSale?       @relation(fields: [sourceId], references: [id], map: "warung_cash_ledger_sale_fkey", onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([cashAccount])
+  @@index([operationalDate])
+  @@index([sourceType, sourceId])
+  @@index([documentNo])
+}
+
+model WarungNonCashLedger {
+  id                    String   @id @default(uuid()) @db.Uuid
+  paymentMethodId        String   @db.Uuid
+  paymentMethodSnapshot  String
+  direction              Direction
+  amount                 BigInt
+  sourceType             String
+  sourceId               String   @db.Uuid
+  documentNo             String
+  operationalDate        DateTime @db.Date
+  createdAt              DateTime @default(now())
+  createdBy              String   @db.Uuid
+
+  sale                   WarungSale? @relation(fields: [sourceId], references: [id], map: "warung_non_cash_ledger_sale_fkey", onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([paymentMethodId])
+  @@index([operationalDate])
+  @@index([sourceType, sourceId])
+}
+
+// NOTE: Due to Prisma relation constraints, polymorphic ledger relations
+// above are indicative. Final implementation may remove direct relation
+// fields from ledgers and use sourceType/sourceId only.
+
+// ============================================================
+// WARUNG PURCHASE, DEBT, EXPENSE
+// ============================================================
+
+model WarungPurchase {
+  id                         String                @id @default(uuid()) @db.Uuid
+  documentNo                 String                @unique
+  operationalDate            DateTime              @db.Date
+  partnerId                  String?               @db.Uuid
+  partner                    Partner?              @relation(fields: [partnerId], references: [id])
+  partnerNameSnapshot        String?
+  supplierInvoiceNo          String?
+  paymentStatus              PurchasePaymentStatus
+  cashSource                 WarungCashAccount?
+  subtotalAmount             BigInt
+  itemDiscountAmount         BigInt                @default(0)
+  invoiceDiscountAmount      BigInt                @default(0)
+  totalDiscountAmount        BigInt                @default(0)
+  totalAmount                BigInt
+  notes                      String?
+  status                     TransactionStatus     @default(selesai)
+  reversalOfPurchaseId       String?               @db.Uuid
+  reversedByPurchaseId       String?               @db.Uuid
+  cancellationReason         String?
+  cancelledAt                DateTime?
+  cancelledBy                String?               @db.Uuid
+  createdAt                  DateTime              @default(now())
+  createdBy                  String                @db.Uuid
+  createdByNameSnapshot      String
+  createdByRoleSnapshot      String
+
+  items                      WarungPurchaseItem[]
+  debt                       WarungSupplierDebt?
+
+  @@index([operationalDate])
+  @@index([partnerId])
+  @@index([status])
+}
+
+model WarungPurchaseItem {
+  id                           String   @id @default(uuid()) @db.Uuid
+  purchaseId                   String   @db.Uuid
+  purchase                     WarungPurchase @relation(fields: [purchaseId], references: [id])
+  stockProductId               String   @db.Uuid
+  stockProduct                 WarungStockProduct @relation(fields: [stockProductId], references: [id])
+  productNameSnapshot          String
+  qtyInput                     Decimal  @db.Decimal(18, 3)
+  unitNameSnapshot             String
+  conversionQtySnapshot        Decimal  @db.Decimal(18, 6)
+  qtyBase                      Decimal  @db.Decimal(18, 3)
+  baseUnitNameSnapshot         String
+  unitPriceAmount              BigInt
+  grossAmount                  BigInt
+  itemDiscountAmount           BigInt   @default(0)
+  invoiceDiscountAllocAmount   BigInt   @default(0)
+  netAmount                    BigInt
+  hppBeforeAmount              BigInt
+  purchaseHppAmount            BigInt
+  hppAfterAmount               BigInt
+  createdAt                    DateTime @default(now())
+
+  @@index([purchaseId])
+  @@index([stockProductId])
+}
+
+model WarungSupplierDebt {
+  id                    String     @id @default(uuid()) @db.Uuid
+  purchaseId             String     @unique @db.Uuid
+  purchase               WarungPurchase @relation(fields: [purchaseId], references: [id])
+  documentNo             String     @unique
+  partnerId              String     @db.Uuid
+  partner                Partner    @relation(fields: [partnerId], references: [id])
+  partnerNameSnapshot    String
+  debtAmount             BigInt
+  paidAmount             BigInt     @default(0)
+  remainingAmount        BigInt
+  status                 DebtStatus @default(belum_lunas)
+  dueDate                DateTime?  @db.Date
+  notes                  String?
+  createdAt              DateTime   @default(now())
+  createdBy              String     @db.Uuid
+  updatedAt              DateTime   @updatedAt
+  updatedBy              String?    @db.Uuid
+
+  payments               WarungSupplierDebtPayment[]
+
+  @@index([partnerId])
+  @@index([status])
+}
+
+model WarungSupplierDebtPayment {
+  id                             String            @id @default(uuid()) @db.Uuid
+  documentNo                     String            @unique
+  supplierDebtId                 String            @db.Uuid
+  supplierDebt                   WarungSupplierDebt @relation(fields: [supplierDebtId], references: [id])
+  purchaseDocumentNoSnapshot     String
+  partnerId                      String            @db.Uuid
+  partnerNameSnapshot            String
+  paymentAmount                  BigInt
+  cashSource                     WarungCashAccount
+  remainingBeforeAmount          BigInt
+  remainingAfterAmount           BigInt
+  status                         TransactionStatus @default(selesai)
+  notes                          String?
+  reversalOfPaymentId            String?           @db.Uuid
+  reversedByPaymentId            String?           @db.Uuid
+  cancellationReason             String?
+  cancelledAt                    DateTime?
+  cancelledBy                    String?           @db.Uuid
+  createdAt                      DateTime          @default(now())
+  createdBy                      String            @db.Uuid
+
+  @@index([supplierDebtId])
+  @@index([documentNo])
+}
+
+model WarungExpenseCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  code        String   @unique
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  createdBy   String?  @db.Uuid
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?  @db.Uuid
+  deletedAt   DateTime?
+  deletedBy   String?  @db.Uuid
+
+  expenses    WarungExpense[]
+}
+
+model WarungExpense {
+  id                         String            @id @default(uuid()) @db.Uuid
+  documentNo                 String            @unique
+  operationalDate            DateTime          @db.Date
+  categoryId                 String            @db.Uuid
+  category                   WarungExpenseCategory @relation(fields: [categoryId], references: [id])
+  categoryNameSnapshot       String
+  amount                     BigInt
+  cashSource                 WarungCashAccount
+  description                String?
+  relatedPurchaseId          String?           @db.Uuid
+  status                     TransactionStatus @default(selesai)
+  reversalOfExpenseId        String?           @db.Uuid
+  reversedByExpenseId        String?           @db.Uuid
+  cancellationReason         String?
+  cancelledAt                DateTime?
+  cancelledBy                String?           @db.Uuid
+  createdAt                  DateTime          @default(now())
+  createdBy                  String            @db.Uuid
+  createdByNameSnapshot      String
+  createdByRoleSnapshot      String
+
+  @@index([operationalDate])
+  @@index([categoryId])
+  @@index([status])
+}
+
+// ============================================================
+// WARUNG CONSIGNMENT, CLOSING, STOCK MOVEMENT
+// ============================================================
+
+model WarungConsignmentProduct {
+  id                       String   @id @default(uuid()) @db.Uuid
+  partnerId                 String   @db.Uuid
+  partner                   Partner  @relation(fields: [partnerId], references: [id])
+  partnerNameSnapshot       String
+  name                      String
+  baseUnitId                String   @db.Uuid
+  baseUnitNameSnapshot      String
+  sku                       String?
+  barcode                   String?
+  sellingPriceAmount        BigInt
+  setorPriceAmount          BigInt
+  profitAmount              BigInt
+  currentStockQty           Decimal  @default(0) @db.Decimal(18, 3)
+  minStockQty               Decimal  @default(0) @db.Decimal(18, 3)
+  isActive                  Boolean  @default(true)
+  notes                     String?
+  createdAt                 DateTime @default(now())
+  createdBy                 String?  @db.Uuid
+  updatedAt                 DateTime @updatedAt
+  updatedBy                 String?  @db.Uuid
+  deletedAt                 DateTime?
+  deletedBy                 String?  @db.Uuid
+
+  sellableItems             WarungSellableItem[]
+  entryItems                WarungConsignmentEntryItem[]
+  sales                     WarungConsignmentSale[]
+
+  @@index([partnerId])
+  @@index([isActive])
+}
+
+model WarungConsignmentEntry {
+  id                    String            @id @default(uuid()) @db.Uuid
+  documentNo             String            @unique
+  operationalDate        DateTime          @db.Date
+  partnerId              String            @db.Uuid
+  partner                Partner           @relation(fields: [partnerId], references: [id])
+  partnerNameSnapshot    String
+  notes                  String?
+  status                 TransactionStatus @default(selesai)
+  createdAt              DateTime          @default(now())
+  createdBy              String            @db.Uuid
+
+  items                  WarungConsignmentEntryItem[]
+}
+
+model WarungConsignmentEntryItem {
+  id                         String   @id @default(uuid()) @db.Uuid
+  entryId                    String   @db.Uuid
+  entry                      WarungConsignmentEntry @relation(fields: [entryId], references: [id])
+  consignmentProductId       String   @db.Uuid
+  consignmentProduct         WarungConsignmentProduct @relation(fields: [consignmentProductId], references: [id])
+  productNameSnapshot        String
+  qtyInput                   Decimal  @db.Decimal(18, 3)
+  unitNameSnapshot           String
+  conversionQtySnapshot      Decimal  @db.Decimal(18, 6)
+  qtyBase                    Decimal  @db.Decimal(18, 3)
+  baseUnitId                 String   @db.Uuid
+  sellingPriceSnapshot       BigInt
+  setorPriceSnapshot         BigInt
+  profitSnapshot             BigInt
+  createdAt                  DateTime @default(now())
+}
+
+model WarungConsignmentSale {
+  id                         String   @id @default(uuid()) @db.Uuid
+  saleId                     String   @db.Uuid
+  sale                       WarungSale @relation(fields: [saleId], references: [id])
+  saleItemId                 String   @unique @db.Uuid
+  saleItem                   WarungSaleItem @relation(fields: [saleItemId], references: [id])
+  consignmentProductId       String   @db.Uuid
+  consignmentProduct         WarungConsignmentProduct @relation(fields: [consignmentProductId], references: [id])
+  partnerId                  String   @db.Uuid
+  partnerNameSnapshot        String
+  productNameSnapshot        String
+  qtyBase                    Decimal  @db.Decimal(18, 3)
+  baseUnitId                 String   @db.Uuid
+  sellingPriceSnapshot       BigInt
+  setorPriceSnapshot         BigInt
+  profitSnapshot             BigInt
+  totalSellingAmount         BigInt
+  totalSetorAmount           BigInt
+  totalProfitAmount          BigInt
+  paymentStatus              ConsignmentPaymentStatus @default(belum_dibayar)
+  paidQtyBase                Decimal  @default(0) @db.Decimal(18, 3)
+  createdAt                  DateTime @default(now())
+
+  paymentItems               WarungConsignmentPaymentItem[]
+}
+
+model WarungConsignmentPayment {
+  id                    String            @id @default(uuid()) @db.Uuid
+  documentNo             String            @unique
+  operationalDate        DateTime          @db.Date
+  partnerId              String            @db.Uuid
+  partnerNameSnapshot    String
+  cashSource             WarungCashAccount
+  totalPaymentAmount     BigInt
+  status                 TransactionStatus @default(selesai)
+  notes                  String?
+  reversalOfPaymentId    String?           @db.Uuid
+  reversedByPaymentId    String?           @db.Uuid
+  cancellationReason     String?
+  cancelledAt            DateTime?
+  cancelledBy            String?           @db.Uuid
+  createdAt              DateTime          @default(now())
+  createdBy              String            @db.Uuid
+
+  items                  WarungConsignmentPaymentItem[]
+}
+
+model WarungConsignmentPaymentItem {
+  id                     String   @id @default(uuid()) @db.Uuid
+  paymentId              String   @db.Uuid
+  payment                WarungConsignmentPayment @relation(fields: [paymentId], references: [id])
+  consignmentSaleId      String   @db.Uuid
+  consignmentSale        WarungConsignmentSale @relation(fields: [consignmentSaleId], references: [id])
+  consignmentProductId   String   @db.Uuid
+  productNameSnapshot    String
+  qtyPaidBase            Decimal  @db.Decimal(18, 3)
+  setorPriceSnapshot     BigInt
+  paymentAmount          BigInt
+  createdAt              DateTime @default(now())
+}
+
+model WarungConsignmentReturn {
+  id                    String            @id @default(uuid()) @db.Uuid
+  documentNo             String            @unique
+  operationalDate        DateTime          @db.Date
+  partnerId              String            @db.Uuid
+  partnerNameSnapshot    String
+  notes                  String?
+  status                 TransactionStatus @default(selesai)
+  createdAt              DateTime          @default(now())
+  createdBy              String            @db.Uuid
+
+  items                  WarungConsignmentReturnItem[]
+}
+
+model WarungConsignmentReturnItem {
+  id                       String   @id @default(uuid()) @db.Uuid
+  returnId                 String   @db.Uuid
+  return                   WarungConsignmentReturn @relation(fields: [returnId], references: [id])
+  consignmentProductId     String   @db.Uuid
+  productNameSnapshot      String
+  qtyInput                 Decimal  @db.Decimal(18, 3)
+  unitNameSnapshot         String
+  conversionQtySnapshot    Decimal  @db.Decimal(18, 6)
+  qtyBase                  Decimal  @db.Decimal(18, 3)
+  baseUnitId               String   @db.Uuid
+  createdAt                DateTime @default(now())
+}
+
+model WarungStockMovement {
+  id                    String   @id @default(uuid()) @db.Uuid
+  domain                Domain   @default(WARUNG)
+  stockProductId         String?  @db.Uuid
+  stockProduct           WarungStockProduct? @relation(fields: [stockProductId], references: [id])
+  consignmentProductId   String?  @db.Uuid
+  movementType           StockMovementType
+  direction              Direction
+  qtyBase                Decimal  @db.Decimal(18, 3)
+  baseUnitId             String   @db.Uuid
+  hppAmountSnapshot      BigInt?
+  valueAmount            BigInt?
+  sourceType             String
+  sourceId               String   @db.Uuid
+  documentNo             String
+  operationalDate        DateTime @db.Date
+  createdAt              DateTime @default(now())
+  createdBy              String   @db.Uuid
+
+  @@index([stockProductId])
+  @@index([consignmentProductId])
+  @@index([movementType])
+  @@index([operationalDate])
+  @@index([sourceType, sourceId])
+}
+
+model WarungClosing {
+  id                                   String        @id @default(uuid()) @db.Uuid
+  documentNo                            String        @unique
+  operationalDate                       DateTime      @db.Date
+  cutoffAt                              DateTime
+  reportedAt                            DateTime
+  reportedBy                            String        @db.Uuid
+  reportedByNameSnapshot                String
+  kasLaciAwalAmount                     BigInt
+  salesCashAmount                       BigInt
+  salesNonCashAmount                    BigInt
+  purchaseCashFromLaciAmount            BigInt
+  debtPaymentFromLaciAmount             BigInt
+  consignmentPaymentFromLaciAmount      BigInt
+  expenseFromLaciAmount                 BigInt
+  expiredRefundToLaciAmount             BigInt
+  reversalNetAmount                     BigInt
+  kasLaciSystemAmount                   BigInt
+  cashPhysicalActualAmount              BigInt
+  cashDifferenceAmount                  BigInt
+  setoranAmanAmount                     BigInt
+  kasLaciAfterClosingAmount             BigInt
+  hasDifference                         Boolean
+  isLateReport                          Boolean
+  notes                                 String?
+  status                                ClosingStatus @default(closed)
+  snapshotJson                          Json
+  createdAt                             DateTime      @default(now())
+  createdBy                             String        @db.Uuid
+
+  @@unique([operationalDate])
+}
+
+// ============================================================
+// BRILINK
+// ============================================================
+
+model BrilinkCashSaldoTemplate {
+  id              String   @id @default(uuid()) @db.Uuid
+  code            String   @unique
+  name            String
+  description     String?
+  cashEffectType  String
+  saldoEffectType String
+  feeEffectType   String
+  isSystem        Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  createdBy       String?  @db.Uuid
+  updatedAt       DateTime @updatedAt
+  updatedBy       String?  @db.Uuid
+
+  transactionTypes BrilinkTransactionType[]
+}
+
+model BrilinkTransactionType {
+  id                       String   @id @default(uuid()) @db.Uuid
+  templateId               String   @db.Uuid
+  template                 BrilinkCashSaldoTemplate @relation(fields: [templateId], references: [id])
+  name                     String
+  code                     String   @unique
+  description              String?
+  requiresBankCategory     Boolean  @default(false)
+  requiresTariff           Boolean  @default(true)
+  referenceFieldEnabled    Boolean  @default(false)
+  referenceFieldRequired   Boolean  @default(false)
+  showTargetAccountField   Boolean  @default(false)
+  showTargetPhoneField     Boolean  @default(false)
+  showTargetNameField      Boolean  @default(false)
+  showProviderField        Boolean  @default(false)
+  showCustomerNameField    Boolean  @default(false)
+  showNoteField            Boolean  @default(true)
+  isActive                 Boolean  @default(true)
+  sortOrder                Int      @default(0)
+  createdAt                DateTime @default(now())
+  createdBy                String?  @db.Uuid
+  updatedAt                DateTime @updatedAt
+  updatedBy                String?  @db.Uuid
+  deletedAt                DateTime?
+  deletedBy                String?  @db.Uuid
+
+  tariffGroups             BrilinkTariffGroup[]
+  transactions             BrilinkTransaction[]
+}
+
+model BrilinkTariffGroup {
+  id                 String   @id @default(uuid()) @db.Uuid
+  transactionTypeId  String   @db.Uuid
+  transactionType    BrilinkTransactionType @relation(fields: [transactionTypeId], references: [id])
+  bankCategory       BankCategory
+  name               String
+  effectiveFrom      DateTime @default(now())
+  effectiveTo        DateTime?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  createdBy          String?  @db.Uuid
+  updatedAt          DateTime @updatedAt
+  updatedBy          String?  @db.Uuid
+
+  ranges             BrilinkTariffRange[]
+
+  @@index([transactionTypeId, bankCategory])
+}
+
+model BrilinkTariffRange {
+  id              String   @id @default(uuid()) @db.Uuid
+  tariffGroupId   String   @db.Uuid
+  tariffGroup     BrilinkTariffGroup @relation(fields: [tariffGroupId], references: [id])
+  minAmount       BigInt
+  maxAmount       BigInt?
+  feeAmount       BigInt
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  createdBy       String?  @db.Uuid
+  updatedAt       DateTime @updatedAt
+  updatedBy       String?  @db.Uuid
+
+  @@index([tariffGroupId])
+}
+
+model BrilinkTransaction {
+  id                             String            @id @default(uuid()) @db.Uuid
+  documentNo                      String            @unique
+  operationalDate                 DateTime          @db.Date
+  transactionTypeId               String            @db.Uuid
+  transactionType                 BrilinkTransactionType @relation(fields: [transactionTypeId], references: [id])
+  transactionTypeNameSnapshot     String
+  templateId                      String            @db.Uuid
+  templateNameSnapshot            String
+  petugasUserId                   String            @db.Uuid
+  petugasNameSnapshot             String
+  petugasRoleSnapshot             String
+  nominalAmount                   BigInt
+  feeAmount                       BigInt
+  totalCustomerPaidAmount         BigInt?
+  bankCategory                    BankCategory      @default(none)
+  tariffRangeSnapshot             String?
+  tariffMinAmountSnapshot         BigInt?
+  tariffMaxAmountSnapshot         BigInt?
+  referenceNo                     String?
+  targetAccountNo                 String?
+  targetPhoneNo                   String?
+  targetName                      String?
+  providerName                    String?
+  customerName                    String?
+  note                            String?
+  cashInAmount                    BigInt            @default(0)
+  cashOutAmount                   BigInt            @default(0)
+  saldoInAmount                   BigInt            @default(0)
+  saldoOutAmount                  BigInt            @default(0)
+  feeIncomeAmount                 BigInt            @default(0)
+  feeReversalAmount               BigInt            @default(0)
+  status                          TransactionStatus @default(selesai)
+  reversalOfTransactionId         String?           @db.Uuid
+  reversedByTransactionId         String?           @db.Uuid
+  cancellationReason              String?
+  cancelledAt                     DateTime?
+  cancelledBy                     String?           @db.Uuid
+  createdAt                       DateTime          @default(now())
+  createdBy                       String            @db.Uuid
+  updatedAt                       DateTime          @updatedAt
+
+  cashLedgers                     BrilinkCashLedger[]
+  saldoLedgers                    BrilinkSaldoLedger[]
+  feeLedgers                      BrilinkFeeLedger[]
+
+  @@index([operationalDate])
+  @@index([transactionTypeId])
+  @@index([status])
+}
+
+model BrilinkCashLedger {
+  id                   String   @id @default(uuid()) @db.Uuid
+  direction             Direction
+  amount                BigInt
+  balanceBeforeAmount   BigInt?
+  balanceAfterAmount    BigInt?
+  sourceType            String
+  sourceId              String   @db.Uuid
+  documentNo            String
+  operationalDate       DateTime @db.Date
+  description           String?
+  createdAt             DateTime @default(now())
+  createdBy             String   @db.Uuid
+
+  transaction           BrilinkTransaction? @relation(fields: [sourceId], references: [id], map: "brilink_cash_ledger_transaction_fkey", onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([operationalDate])
+  @@index([sourceType, sourceId])
+  @@index([documentNo])
+}
+
+model BrilinkSaldoLedger {
+  id                   String   @id @default(uuid()) @db.Uuid
+  direction             Direction
+  amount                BigInt
+  balanceBeforeAmount   BigInt?
+  balanceAfterAmount    BigInt?
+  sourceType            String
+  sourceId              String   @db.Uuid
+  documentNo            String
+  operationalDate       DateTime @db.Date
+  description           String?
+  createdAt             DateTime @default(now())
+  createdBy             String   @db.Uuid
+
+  transaction           BrilinkTransaction? @relation(fields: [sourceId], references: [id], map: "brilink_saldo_ledger_transaction_fkey", onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([operationalDate])
+  @@index([sourceType, sourceId])
+  @@index([documentNo])
+}
+
+model BrilinkFeeLedger {
+  id                         String             @id @default(uuid()) @db.Uuid
+  direction                   FeeLedgerDirection
+  amount                      BigInt
+  transactionId               String?            @db.Uuid
+  transaction                 BrilinkTransaction? @relation(fields: [transactionId], references: [id])
+  sourceType                  String
+  sourceId                    String             @db.Uuid
+  documentNo                  String
+  operationalDate             DateTime           @db.Date
+  transactionTypeSnapshot     String?
+  createdAt                   DateTime           @default(now())
+  createdBy                   String             @db.Uuid
+
+  @@index([transactionId])
+  @@index([operationalDate])
+}
+
+// Temporary funds
+model BrilinkDanaLuar {
+  id                    String              @id @default(uuid()) @db.Uuid
+  documentNo             String              @unique
+  operationalDate        DateTime            @db.Date
+  borrowerName           String
+  nominalAmount          BigInt
+  sourceAccount          BrilinkAccount
+  totalReturnedAmount    BigInt              @default(0)
+  remainingAmount        BigInt
+  status                 TemporaryFundStatus @default(aktif)
+  notes                  String?
+  reversalOfId           String?             @db.Uuid
+  reversedById           String?             @db.Uuid
+  cancellationReason     String?
+  cancelledAt            DateTime?
+  cancelledBy            String?             @db.Uuid
+  createdAt              DateTime            @default(now())
+  createdBy              String              @db.Uuid
+  createdByNameSnapshot  String
+
+  returns                BrilinkDanaLuarReturn[]
+}
+
+model BrilinkDanaLuarReturn {
+  id                    String            @id @default(uuid()) @db.Uuid
+  documentNo             String            @unique
+  danaLuarId             String            @db.Uuid
+  danaLuar               BrilinkDanaLuar    @relation(fields: [danaLuarId], references: [id])
+  operationalDate        DateTime          @db.Date
+  returnAmount           BigInt
+  returnToAccount        BrilinkAccount
+  remainingBeforeAmount  BigInt
+  remainingAfterAmount   BigInt
+  status                 TransactionStatus @default(selesai)
+  notes                  String?
+  reversalOfReturnId     String?           @db.Uuid
+  reversedByReturnId     String?           @db.Uuid
+  cancellationReason     String?
+  cancelledAt            DateTime?
+  cancelledBy            String?           @db.Uuid
+  createdAt              DateTime          @default(now())
+  createdBy              String            @db.Uuid
+}
+
+model BrilinkInjection {
+  id                    String              @id @default(uuid()) @db.Uuid
+  documentNo             String              @unique
+  operationalDate        DateTime            @db.Date
+  fundProviderName       String
+  nominalAmount          BigInt
+  targetAccount          BrilinkAccount
+  totalReturnedAmount    BigInt              @default(0)
+  remainingAmount        BigInt
+  status                 TemporaryFundStatus @default(aktif)
+  notes                  String?
+  reversalOfId           String?             @db.Uuid
+  reversedById           String?             @db.Uuid
+  cancellationReason     String?
+  cancelledAt            DateTime?
+  cancelledBy            String?             @db.Uuid
+  createdAt              DateTime            @default(now())
+  createdBy              String              @db.Uuid
+  createdByNameSnapshot  String
+
+  returns                BrilinkInjectionReturn[]
+}
+
+model BrilinkInjectionReturn {
+  id                    String            @id @default(uuid()) @db.Uuid
+  documentNo             String            @unique
+  injectionId            String            @db.Uuid
+  injection              BrilinkInjection  @relation(fields: [injectionId], references: [id])
+  operationalDate        DateTime          @db.Date
+  returnAmount           BigInt
+  returnFromAccount      BrilinkAccount
+  remainingBeforeAmount  BigInt
+  remainingAfterAmount   BigInt
+  status                 TransactionStatus @default(selesai)
+  notes                  String?
+  reversalOfReturnId     String?           @db.Uuid
+  reversedByReturnId     String?           @db.Uuid
+  cancellationReason     String?
+  cancelledAt            DateTime?
+  cancelledBy            String?           @db.Uuid
+  createdAt              DateTime          @default(now())
+  createdBy              String            @db.Uuid
+}
+
+// BRILink Consignment
+model BrilinkConsignmentProduct {
+  id                       String   @id @default(uuid()) @db.Uuid
+  partnerId                 String   @db.Uuid
+  partner                   Partner  @relation(fields: [partnerId], references: [id])
+  partnerNameSnapshot       String
+  name                      String
+  baseUnitId                String   @db.Uuid
+  baseUnitNameSnapshot      String
+  sku                       String?
+  barcode                   String?
+  sellingPriceAmount        BigInt
+  setorPriceAmount          BigInt
+  profitAmount              BigInt
+  currentStockQty           Decimal  @default(0) @db.Decimal(18, 3)
+  minStockQty               Decimal  @default(0) @db.Decimal(18, 3)
+  isActive                  Boolean  @default(true)
+  notes                     String?
+  createdAt                 DateTime @default(now())
+  createdBy                 String?  @db.Uuid
+  updatedAt                 DateTime @updatedAt
+  updatedBy                 String?  @db.Uuid
+  deletedAt                 DateTime?
+  deletedBy                 String?  @db.Uuid
+
+  entryItems                BrilinkConsignmentEntryItem[]
+  sales                     BrilinkConsignmentSale[]
+
+  @@index([partnerId])
+}
+
+model BrilinkConsignmentEntry {
+  id                    String            @id @default(uuid()) @db.Uuid
+  documentNo             String            @unique
+  operationalDate        DateTime          @db.Date
+  partnerId              String            @db.Uuid
+  partner                Partner           @relation(fields: [partnerId], references: [id])
+  partnerNameSnapshot    String
+  notes                  String?
+  status                 TransactionStatus @default(selesai)
+  createdAt              DateTime          @default(now())
+  createdBy              String            @db.Uuid
+
+  items                  BrilinkConsignmentEntryItem[]
+}
+
+model BrilinkConsignmentEntryItem {
+  id                         String   @id @default(uuid()) @db.Uuid
+  entryId                    String   @db.Uuid
+  entry                      BrilinkConsignmentEntry @relation(fields: [entryId], references: [id])
+  consignmentProductId       String   @db.Uuid
+  consignmentProduct         BrilinkConsignmentProduct @relation(fields: [consignmentProductId], references: [id])
+  productNameSnapshot        String
+  qtyInput                   Decimal  @db.Decimal(18, 3)
+  unitNameSnapshot           String
+  conversionQtySnapshot      Decimal  @db.Decimal(18, 6)
+  qtyBase                    Decimal  @db.Decimal(18, 3)
+  baseUnitId                 String   @db.Uuid
+  sellingPriceSnapshot       BigInt
+  setorPriceSnapshot         BigInt
+  profitSnapshot             BigInt
+  createdAt                  DateTime @default(now())
+}
+
+model BrilinkConsignmentSale {
+  id                         String   @id @default(uuid()) @db.Uuid
+  documentNo                  String   @unique
+  operationalDate             DateTime @db.Date
+  consignmentProductId        String   @db.Uuid
+  consignmentProduct          BrilinkConsignmentProduct @relation(fields: [consignmentProductId], references: [id])
+  partnerId                   String   @db.Uuid
+  partnerNameSnapshot         String
+  productNameSnapshot         String
+  qtyBase                     Decimal  @db.Decimal(18, 3)
+  baseUnitId                  String   @db.Uuid
+  sellingPriceSnapshot        BigInt
+  setorPriceSnapshot          BigInt
+  profitSnapshot              BigInt
+  totalSellingAmount          BigInt
+  totalSetorAmount            BigInt
+  totalProfitAmount           BigInt
+  paymentStatus               ConsignmentPaymentStatus @default(belum_dibayar)
+  paidQtyBase                 Decimal @default(0) @db.Decimal(18, 3)
+  status                      TransactionStatus @default(selesai)
+  reversalOfSaleId            String? @db.Uuid
+  reversedBySaleId            String? @db.Uuid
+  cancellationReason          String?
+  cancelledAt                 DateTime?
+  cancelledBy                 String? @db.Uuid
+  createdAt                   DateTime @default(now())
+  createdBy                   String  @db.Uuid
+  createdByNameSnapshot       String
+
+  paymentItems                BrilinkConsignmentPaymentItem[]
+}
+
+model BrilinkConsignmentPayment {
+  id                    String            @id @default(uuid()) @db.Uuid
+  documentNo             String            @unique
+  operationalDate        DateTime          @db.Date
+  partnerId              String            @db.Uuid
+  partnerNameSnapshot    String
+  totalPaymentAmount     BigInt
+  cashSource             BrilinkAccount    @default(cash)
+  status                 TransactionStatus @default(selesai)
+  notes                  String?
+  reversalOfPaymentId    String?           @db.Uuid
+  reversedByPaymentId    String?           @db.Uuid
+  cancellationReason     String?
+  cancelledAt            DateTime?
+  cancelledBy            String?           @db.Uuid
+  createdAt              DateTime          @default(now())
+  createdBy              String            @db.Uuid
+
+  items                  BrilinkConsignmentPaymentItem[]
+}
+
+model BrilinkConsignmentPaymentItem {
+  id                     String   @id @default(uuid()) @db.Uuid
+  paymentId              String   @db.Uuid
+  payment                BrilinkConsignmentPayment @relation(fields: [paymentId], references: [id])
+  consignmentSaleId      String   @db.Uuid
+  consignmentSale        BrilinkConsignmentSale @relation(fields: [consignmentSaleId], references: [id])
+  consignmentProductId   String   @db.Uuid
+  productNameSnapshot    String
+  qtyPaidBase            Decimal  @db.Decimal(18, 3)
+  setorPriceSnapshot     BigInt
+  paymentAmount          BigInt
+  createdAt              DateTime @default(now())
+}
+
+model BrilinkConsignmentReturn {
+  id                    String            @id @default(uuid()) @db.Uuid
+  documentNo             String            @unique
+  operationalDate        DateTime          @db.Date
+  partnerId              String            @db.Uuid
+  partnerNameSnapshot    String
+  notes                  String?
+  status                 TransactionStatus @default(selesai)
+  createdAt              DateTime          @default(now())
+  createdBy              String            @db.Uuid
+
+  items                  BrilinkConsignmentReturnItem[]
+}
+
+model BrilinkConsignmentReturnItem {
+  id                       String   @id @default(uuid()) @db.Uuid
+  returnId                 String   @db.Uuid
+  return                   BrilinkConsignmentReturn @relation(fields: [returnId], references: [id])
+  consignmentProductId     String   @db.Uuid
+  productNameSnapshot      String
+  qtyInput                 Decimal  @db.Decimal(18, 3)
+  unitNameSnapshot         String
+  conversionQtySnapshot    Decimal  @db.Decimal(18, 6)
+  qtyBase                  Decimal  @db.Decimal(18, 3)
+  baseUnitId               String   @db.Uuid
+  createdAt                DateTime @default(now())
+}
+
+model BrilinkClosing {
+  id                         String        @id @default(uuid()) @db.Uuid
+  documentNo                  String        @unique
+  operationalDate             DateTime      @db.Date
+  cutoffAt                    DateTime
+  reportedAt                  DateTime
+  reportedBy                  String        @db.Uuid
+  reportedByNameSnapshot      String
+  cashStartAmount             BigInt
+  cashInAmount                BigInt
+  cashOutAmount               BigInt
+  cashSystemEndAmount         BigInt
+  cashPhysicalActualAmount    BigInt
+  cashDifferenceAmount        BigInt
+  saldoStartAmount            BigInt
+  saldoInAmount               BigInt
+  saldoOutAmount              BigInt
+  saldoSystemEndAmount        BigInt
+  saldoActualAmount           BigInt
+  saldoDifferenceAmount       BigInt
+  totalTransactionCount       Int
+  totalFeeGrossAmount         BigInt
+  totalFeeReversalAmount      BigInt
+  totalFeeNetAmount           BigInt
+  danaLuarActiveAmount        BigInt
+  injectionActiveAmount       BigInt
+  consignmentPayableAmount    BigInt
+  hasCashDifference           Boolean
+  hasSaldoDifference          Boolean
+  isLateReport                Boolean
+  notes                       String?
+  status                      ClosingStatus @default(closed)
+  snapshotJson                Json
+  createdAt                   DateTime      @default(now())
+  createdBy                   String        @db.Uuid
+
+  @@unique([operationalDate])
+}
+
+// ============================================================
+// ABSENSI
+// ============================================================
+
+model AttendanceSetting {
+  id                         String   @id @default(uuid()) @db.Uuid
+  locationName               String
+  latitude                   Decimal  @db.Decimal(10, 7)
+  longitude                  Decimal  @db.Decimal(10, 7)
+  radiusMeter                Int
+  qrEnabled                  Boolean  @default(true)
+  qrRefreshIntervalSeconds   Int      @default(60)
+  qrTokenTtlSeconds          Int      @default(60)
+  gpsRequired                Boolean  @default(true)
+  allowOutsideRadiusLog      Boolean  @default(true)
+  defaultCheckinTime         DateTime? @db.Time
+  defaultCheckoutTime        DateTime? @db.Time
+  lateToleranceMinutes       Int?
+  isActive                   Boolean  @default(true)
+  createdAt                  DateTime @default(now())
+  createdBy                  String?  @db.Uuid
+  updatedAt                  DateTime @updatedAt
+  updatedBy                  String?  @db.Uuid
+
+  tokens                     AttendanceQrToken[]
+}
+
+model AttendanceQrToken {
+  id             String   @id @default(uuid()) @db.Uuid
+  settingId      String   @db.Uuid
+  setting        AttendanceSetting @relation(fields: [settingId], references: [id])
+  tokenHash      String   @unique
+  validFrom      DateTime
+  validUntil     DateTime
+  isUsed         Boolean  @default(false)
+  generatedBy    String   @db.Uuid
+  generatedAt    DateTime @default(now())
+  deviceInfo     String?
+  ipAddress      String?
+
+  checkinRecords  AttendanceRecord[] @relation("CheckinQrToken")
+  checkoutRecords AttendanceRecord[] @relation("CheckoutQrToken")
+
+  @@index([validUntil])
+}
+
+model AttendanceRecord {
+  id                         String                @id @default(uuid()) @db.Uuid
+  userId                     String                @db.Uuid
+  user                       User                  @relation(fields: [userId], references: [id])
+  userNameSnapshot           String
+  roleSnapshot               String
+  operationalDate            DateTime              @db.Date
+  checkinAt                  DateTime?
+  checkinLatitude            Decimal?              @db.Decimal(10, 7)
+  checkinLongitude           Decimal?              @db.Decimal(10, 7)
+  checkinDistanceMeter       Decimal?              @db.Decimal(10, 2)
+  checkinStatus              AttendancePointStatus?
+  checkoutAt                 DateTime?
+  checkoutLatitude           Decimal?              @db.Decimal(10, 7)
+  checkoutLongitude          Decimal?              @db.Decimal(10, 7)
+  checkoutDistanceMeter      Decimal?              @db.Decimal(10, 2)
+  checkoutStatus             AttendancePointStatus?
+  qrTokenIdCheckin           String?               @db.Uuid
+  qrTokenCheckin             AttendanceQrToken?    @relation("CheckinQrToken", fields: [qrTokenIdCheckin], references: [id])
+  qrTokenIdCheckout          String?               @db.Uuid
+  qrTokenCheckout            AttendanceQrToken?    @relation("CheckoutQrToken", fields: [qrTokenIdCheckout], references: [id])
+  deviceInfoCheckin          String?
+  deviceInfoCheckout         String?
+  ipAddressCheckin           String?
+  ipAddressCheckout          String?
+  status                     AttendanceRecordStatus
+  notes                      String?
+  createdAt                  DateTime              @default(now())
+  createdBy                  String                @db.Uuid
+  updatedAt                  DateTime              @updatedAt
+  updatedBy                  String?               @db.Uuid
+
+  corrections                AttendanceCorrection[]
+
+  @@unique([userId, operationalDate])
+  @@index([operationalDate])
+}
+
+model AttendanceCorrection {
+  id                         String   @id @default(uuid()) @db.Uuid
+  attendanceRecordId          String   @db.Uuid
+  attendanceRecord            AttendanceRecord @relation(fields: [attendanceRecordId], references: [id])
+  correctionType              String
+  oldValue                    Json
+  newValue                    Json
+  reason                      String
+  correctedBy                 String   @db.Uuid
+  correctedByNameSnapshot     String
+  correctedAt                 DateTime @default(now())
+}
+
+// ============================================================
+// FINANCIAL ADJUSTMENTS
+// ============================================================
+
+model FinancialAdjustment {
+  id                    String           @id @default(uuid()) @db.Uuid
+  documentNo             String           @unique
+  domain                 Domain
+  adjustmentType         String
+  ledgerAccount          String
+  direction              Direction
+  amount                 BigInt
+  reason                 String
+  sourceClosingId         String?          @db.Uuid
+  status                 AdjustmentStatus  @default(selesai)
+  reversalOfAdjustmentId String?           @db.Uuid
+  reversedByAdjustmentId String?           @db.Uuid
+  createdAt              DateTime         @default(now())
+  createdBy              String           @db.Uuid
+
+  @@index([domain])
+  @@index([adjustmentType])
+  @@index([createdAt])
+}

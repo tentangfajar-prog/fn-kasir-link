@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fn-kasir-link-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fn_kasir_link
+      POSTGRES_USER: fn_kasir_link
+      POSTGRES_PASSWORD: fn_kasir_link_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fn_kasir_link -d fn_kasir_link"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

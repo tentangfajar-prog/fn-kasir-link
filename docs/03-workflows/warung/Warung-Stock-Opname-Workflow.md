@@ -1,0 +1,14 @@
+# Warung Stock Opname Workflow
+
+Status: **FINAL V1 BASELINE**
+
+## Summary
+
+Pilih produk/tabel → input stok fisik → selisih → posting → stock movement.
+
+## Required Rules
+
+- Permission backend wajib dicek.
+- Domain scope wajib dicek.
+- Proses uang/stok wajib atomic.
+- Snapshot dan Audit Log wajib untuk aksi penting.
