@@ -1,0 +1,99 @@
+# Staging Deploy Runbook
+
+Target domain: `kasirlink.nairagroup.id`
+
+Status: **staging only — do not use production database**
+
+## Server Requirements
+
+- Node.js 22+ or 24+
+- npm
+- PM2 or equivalent process runner
+- PostgreSQL 16+ staging database
+- Reverse proxy from `kasirlink.nairagroup.id` to app port `3000`
+
+## Required Env
+
+Copy `.env.staging.example` to `.env` on staging server and fill real values.
+
+```env
+NODE_ENV=production
+DATABASE_URL=postgresql://USER:***@HOST:5432/fn_kasir_link_staging
+NEXT_PUBLIC_APP_NAME=FN Kasir Link Staging
+UPLOAD_STORAGE_PATH=/app/storage/uploads
+BARCODE_CAMERA_ENABLED=true
+SEED_OWNER_PASSWORD=replace-with-staging-owner-password
+```
+
+## First Deploy
+
+```bash
+git clone https://github.com/tentangfajar-prog/fn-kasir-link.git
+cd fn-kasir-link
+npm ci
+npm run prisma:generate
+npm run build
+npm run db:migrate:deploy
+npm run prisma:seed
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+## Update Deploy
+
+```bash
+cd fn-kasir-link
+git pull --ff-only
+npm ci
+npm run prisma:generate
+npm run build
+npm run db:migrate:deploy
+pm2 restart fn-kasir-link-staging
+```
+
+## Reverse Proxy Example
+
+Point `kasirlink.nairagroup.id` to staging server, then proxy to local app port `3000`.
+
+```nginx
+server {
+  server_name kasirlink.nairagroup.id;
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+
+## Smoke Test
+
+Run after deploy:
+
+- Open `/auth/login`.
+- Login owner.
+- Open `/dashboard`.
+- Open `/warung/pos` and submit checkout test.
+- Open `/brilink/transactions` and submit transaction test.
+- Open closing preview for Warung and BRILink.
+- Open `/laporan-keuangan`.
+- Test `/absensi` status.
+- Print one test receipt.
+
+## Rollback
+
+```bash
+cd fn-kasir-link
+git log --oneline -5
+git checkout <previous-commit>
+npm ci
+npm run prisma:generate
+npm run build
+pm2 restart fn-kasir-link-staging
+```
+
+If migration changed schema/data, restore staging DB backup instead of manual table edits.
