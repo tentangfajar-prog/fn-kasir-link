@@ -15,6 +15,7 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { code: "warung.stock.view", name: "Lihat Stok Warung", domain: "WARUNG", module: "warung.stock" },
   { code: "warung.stock.opname", name: "Stock Opname Warung", domain: "WARUNG", module: "warung.stock", sensitive: true },
   { code: "warung.pos.use", name: "Gunakan POS Warung", domain: "WARUNG", module: "warung.pos" },
+  { code: "warung.sale.cancel", name: "Batalkan Penjualan Warung", domain: "WARUNG", module: "warung.pos", sensitive: true },
   { code: "warung.closing.create", name: "Closing Warung", domain: "WARUNG", module: "warung.closing", sensitive: true },
   { code: "brilink.access", name: "Akses BRILink", domain: "BRILINK", module: "brilink" },
   { code: "brilink.transaction.create", name: "Buat Transaksi BRILink", domain: "BRILINK", module: "brilink.transaction" },

@@ -75,6 +75,21 @@ enum StockOpnameStatus {
   CANCELLED
 }
 
+enum PaymentCategory {
+  CASH
+  NON_CASH
+}
+
+enum SaleStatus {
+  COMPLETED
+  CANCELLED
+}
+
+enum WarungCashAccount {
+  KAS_LACI
+  KAS_AMAN
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -299,6 +314,7 @@ model WarungStockProduct {
   conversions      WarungProductUnitConversion[]
   componentOf      WarungItemComposition[]
   stockMovements   WarungStockMovement[]
+  saleItems        WarungSaleItem[]
   opnameItems      WarungStockOpnameItem[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -343,6 +359,7 @@ model WarungSellableItem {
   sortOrder          Int     @default(0)
   notes              String?
   compositions       WarungItemComposition[]
+  saleItems          WarungSaleItem[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   deletedAt          DateTime?
@@ -421,6 +438,108 @@ model WarungStockOpnameItem {
 
   @@unique([opnameId, stockProductId])
   @@index([stockProductId])
+}
+
+model WarungPaymentMethod {
+  id        String          @id @default(uuid())
+  name      String
+  code      String          @unique
+  category  PaymentCategory
+  isActive  Boolean         @default(true)
+  sortOrder Int             @default(0)
+  sales     WarungSale[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt DateTime?
+}
+
+model WarungSale {
+  id                        String          @id @default(uuid())
+  documentNo                String          @unique
+  operationalDate           DateTime        @db.Date
+  cashierUserId             String
+  cashierNameSnapshot       String
+  cashierRoleSnapshot       String
+  paymentMethodId           String
+  paymentMethod             WarungPaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  paymentMethodNameSnapshot String
+  paymentCategorySnapshot   PaymentCategory
+  subtotalAmount            BigInt
+  totalDiscountAmount       BigInt          @default(0)
+  totalAmount               BigInt
+  cashReceivedAmount        BigInt?
+  changeAmount              BigInt?
+  status                    SaleStatus      @default(COMPLETED)
+  items                     WarungSaleItem[]
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+
+  @@index([operationalDate])
+  @@index([cashierUserId])
+  @@index([status])
+}
+
+model WarungSaleItem {
+  id                       String           @id @default(uuid())
+  saleId                   String
+  sale                     WarungSale       @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  sellableItemId           String
+  sellableItem             WarungSellableItem @relation(fields: [sellableItemId], references: [id])
+  stockProductId           String?
+  stockProduct             WarungStockProduct? @relation(fields: [stockProductId], references: [id])
+  sellableItemNameSnapshot String
+  itemTypeSnapshot         SellableItemType
+  categoryNameSnapshot     String
+  qty                      Decimal          @db.Decimal(18, 3)
+  qtyBase                  Decimal?         @db.Decimal(18, 3)
+  sellingPriceSnapshot     BigInt
+  hppSnapshotAmount        BigInt?
+  grossAmount              BigInt
+  discountAmount           BigInt           @default(0)
+  netAmount                BigInt
+  profitAmount             BigInt
+  compositionSnapshot      Json?
+  createdAt                DateTime         @default(now())
+
+  @@index([saleId])
+  @@index([sellableItemId])
+  @@index([stockProductId])
+}
+
+model WarungCashLedger {
+  id              String            @id @default(uuid())
+  account         WarungCashAccount
+  direction       StockDirection
+  amount          BigInt
+  sourceType      String
+  sourceId        String
+  documentNo      String
+  operationalDate DateTime          @db.Date
+  note            String?
+  createdBy       String
+  createdAt       DateTime          @default(now())
+
+  @@index([account])
+  @@index([sourceType, sourceId])
+  @@index([operationalDate])
+}
+
+model WarungNonCashLedger {
+  id              String   @id @default(uuid())
+  paymentMethodId String
+  direction       StockDirection
+  amount          BigInt
+  sourceType      String
+  sourceId        String
+  documentNo      String
+  operationalDate DateTime @db.Date
+  note            String?
+  createdBy       String
+  createdAt       DateTime @default(now())
+
+  @@index([paymentMethodId])
+  @@index([sourceType, sourceId])
+  @@index([operationalDate])
 }
 
 model AuditLog {

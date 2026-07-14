@@ -13,7 +13,8 @@
     "db:push": "prisma db push",
     "check:sprint01": "tsx scripts/sprint01-self-check.ts",
     "check:sprint02": "tsx scripts/sprint02-self-check.ts",
-    "check:sprint03": "tsx scripts/sprint03-self-check.ts"
+    "check:sprint03": "tsx scripts/sprint03-self-check.ts",
+    "check:sprint04": "tsx scripts/sprint04-self-check.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
