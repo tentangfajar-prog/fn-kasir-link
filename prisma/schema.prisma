@@ -43,6 +43,38 @@ enum SettingScope {
   SYSTEM
 }
 
+enum SellableItemType {
+  NORMAL
+  RECIPE
+  BUNDLE
+}
+
+enum PriceMode {
+  MANUAL
+  AUTO_HPP_PROFIT
+}
+
+enum StockMovementType {
+  PURCHASE
+  SALE
+  COMPOSITION_SALE
+  STOCK_OPNAME
+  EXPIRED_RETURN
+  REVERSAL
+  ADJUSTMENT
+}
+
+enum StockDirection {
+  IN
+  OUT
+}
+
+enum StockOpnameStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -222,6 +254,173 @@ model PrintLog {
   @@index([domain, module])
   @@index([entityType, entityId])
   @@index([actorId])
+}
+
+model WarungUnit {
+  id               String   @id @default(uuid())
+  name             String
+  code             String   @unique
+  isDecimalAllowed Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  stockProducts    WarungStockProduct[]
+  conversionsFrom  WarungProductUnitConversion[] @relation("ConversionFromUnit")
+  conversionsTo    WarungProductUnitConversion[] @relation("ConversionToUnit")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  deletedAt        DateTime?
+}
+
+model WarungProductCategory {
+  id            String   @id @default(uuid())
+  name          String
+  code          String   @unique
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  sellableItems WarungSellableItem[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+}
+
+model WarungStockProduct {
+  id               String   @id @default(uuid())
+  name             String
+  baseUnitId       String
+  baseUnit         WarungUnit @relation(fields: [baseUnitId], references: [id])
+  sku              String?  @unique
+  barcode          String?  @unique
+  minStockQty      Decimal  @default(0) @db.Decimal(18, 3)
+  currentStockQty  Decimal  @default(0) @db.Decimal(18, 3)
+  currentHppAmount BigInt   @default(0)
+  isActive         Boolean  @default(true)
+  notes            String?
+  sellableItems    WarungSellableItem[]
+  conversions      WarungProductUnitConversion[]
+  componentOf      WarungItemComposition[]
+  stockMovements   WarungStockMovement[]
+  opnameItems      WarungStockOpnameItem[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  deletedAt        DateTime?
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model WarungProductUnitConversion {
+  id             String   @id @default(uuid())
+  stockProductId String
+  stockProduct   WarungStockProduct @relation(fields: [stockProductId], references: [id])
+  fromUnitId     String
+  fromUnit       WarungUnit @relation("ConversionFromUnit", fields: [fromUnitId], references: [id])
+  toUnitId       String
+  toUnit         WarungUnit @relation("ConversionToUnit", fields: [toUnitId], references: [id])
+  conversionQty  Decimal  @db.Decimal(18, 6)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([stockProductId])
+  @@index([fromUnitId, toUnitId])
+}
+
+model WarungSellableItem {
+  id                 String           @id @default(uuid())
+  itemType           SellableItemType @default(NORMAL)
+  stockProductId     String?
+  stockProduct       WarungStockProduct? @relation(fields: [stockProductId], references: [id])
+  categoryId         String
+  category           WarungProductCategory @relation(fields: [categoryId], references: [id])
+  name               String
+  sku                String? @unique
+  barcode            String? @unique
+  sellingPriceAmount BigInt
+  priceMode          PriceMode @default(MANUAL)
+  targetProfitAmount BigInt?
+  isFavorite         Boolean @default(false)
+  isActive           Boolean @default(true)
+  sortOrder          Int     @default(0)
+  notes              String?
+  compositions       WarungItemComposition[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+
+  @@index([name])
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model WarungItemComposition {
+  id                 String   @id @default(uuid())
+  sellableItemId     String
+  sellableItem       WarungSellableItem @relation(fields: [sellableItemId], references: [id], onDelete: Cascade)
+  componentProductId String
+  componentProduct   WarungStockProduct @relation(fields: [componentProductId], references: [id])
+  qtyBase            Decimal  @db.Decimal(18, 3)
+  sortOrder          Int      @default(0)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([sellableItemId])
+  @@index([componentProductId])
+}
+
+model WarungStockMovement {
+  id                String            @id @default(uuid())
+  stockProductId    String
+  stockProduct      WarungStockProduct @relation(fields: [stockProductId], references: [id])
+  movementType      StockMovementType
+  direction         StockDirection
+  qtyBase           Decimal           @db.Decimal(18, 3)
+  hppAmountSnapshot BigInt?
+  valueAmount       BigInt?
+  sourceType        String
+  sourceId          String
+  documentNo        String
+  operationalDate   DateTime          @db.Date
+  createdBy         String
+  createdAt         DateTime          @default(now())
+
+  @@index([stockProductId])
+  @@index([movementType])
+  @@index([operationalDate])
+  @@index([sourceType, sourceId])
+}
+
+model WarungStockOpname {
+  id              String              @id @default(uuid())
+  documentNo      String              @unique
+  operationalDate DateTime            @db.Date
+  status          StockOpnameStatus   @default(DRAFT)
+  notes           String?
+  postedAt        DateTime?
+  postedBy        String?
+  items           WarungStockOpnameItem[]
+  createdBy       String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([operationalDate])
+  @@index([status])
+}
+
+model WarungStockOpnameItem {
+  id             String   @id @default(uuid())
+  opnameId       String
+  opname         WarungStockOpname @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  stockProductId String
+  stockProduct   WarungStockProduct @relation(fields: [stockProductId], references: [id])
+  systemQtyBase  Decimal  @db.Decimal(18, 3)
+  physicalQtyBase Decimal @db.Decimal(18, 3)
+  differenceQtyBase Decimal @db.Decimal(18, 3)
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  @@unique([opnameId, stockProductId])
+  @@index([stockProductId])
 }
 
 model AuditLog {

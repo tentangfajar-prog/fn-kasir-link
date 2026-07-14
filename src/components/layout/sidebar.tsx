@@ -3,6 +3,9 @@ import Link from "next/link";
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/warung", label: "Warung" },
+  { href: "/warung/products", label: "Produk Warung" },
+  { href: "/warung/sellable-items", label: "Item Jual Warung" },
+  { href: "/warung/stock-opname", label: "Stock Opname Warung" },
   { href: "/brilink", label: "BRILink" },
   { href: "/laporan-keuangan", label: "Laporan Keuangan" },
   { href: "/absensi", label: "Absensi" },
