@@ -12,11 +12,11 @@ export const dailyChartFilterSchema = z.object({
   metric: z.enum(["pendapatan", "profit", "fee", "transaction_count"]).default("pendapatan"),
   mode: z.enum(["combined", "split_domain"]).default("combined"),
   month: z.string().regex(/^\d{4}-\d{2}$/),
-  compare_with_previous: z.boolean().default(false),
+  compare_with_previous: z.union([z.boolean(), z.enum(["true", "false"])]).default(false).transform((value) => value === true || value === "true"),
 });
 
 export const monthlyChartFilterSchema = z.object({
   metric: z.enum(["pendapatan", "profit"]).default("pendapatan"),
   mode: z.enum(["combined", "split_domain"]).default("combined"),
-  year: z.number().int().min(2000).max(2100),
+  year: z.coerce.number().int().min(2000).max(2100),
 });
