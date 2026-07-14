@@ -87,21 +87,23 @@ export class FinancialReportService {
   async getDebtAndPayables(ctx: AuthContext, input: unknown = {}) {
     this.requireReport(ctx);
     reportFilterSchema.parse(input);
-    const [supplierDebts, danaLuar, injections] = await Promise.all([
+    const [supplierDebts, danaLuar, injections, consignments] = await Promise.all([
       prisma.warungSupplierDebt.findMany({ where: { status: { in: ["OPEN", "PARTIAL"] } }, select: { remainingAmount: true } }),
       prisma.brilinkDanaLuar.findMany({ where: { status: { in: ["ACTIVE", "PARTIAL"] } }, select: { remainingAmount: true } }),
       prisma.brilinkInjection.findMany({ where: { status: { in: ["ACTIVE", "PARTIAL"] } }, select: { remainingAmount: true } }),
+      prisma.consignmentEntry.findMany({ where: { status: "ACTIVE" }, select: { domain: true, qtySold: true, qtyPaid: true, unitCostAmount: true } }),
     ]);
     const hutangSupplier = this.sum(supplierDebts.map((debt) => debt.remainingAmount));
     const danaLuarAktif = this.sum(danaLuar.map((fund) => fund.remainingAmount));
     const injeksiAktif = this.sum(injections.map((fund) => fund.remainingAmount));
+    const consignmentPayable = consignments.reduce((total, entry) => total + BigInt(entry.qtySold.minus(entry.qtyPaid).mul(entry.unitCostAmount.toString()).floor().toFixed(0)), BigInt(0));
     return {
       hutang_supplier: money(hutangSupplier),
-      kewajiban_konsinyasi_warung: "0",
-      kewajiban_konsinyasi_brilink: "0",
+      kewajiban_konsinyasi_warung: money(consignments.filter((entry) => entry.domain === "WARUNG").reduce((total, entry) => total + BigInt(entry.qtySold.minus(entry.qtyPaid).mul(entry.unitCostAmount.toString()).floor().toFixed(0)), BigInt(0))),
+      kewajiban_konsinyasi_brilink: money(consignments.filter((entry) => entry.domain === "BRILINK").reduce((total, entry) => total + BigInt(entry.qtySold.minus(entry.qtyPaid).mul(entry.unitCostAmount.toString()).floor().toFixed(0)), BigInt(0))),
       dana_luar_aktif: money(danaLuarAktif),
       injeksi_aktif: money(injeksiAktif),
-      total_kewajiban: money(hutangSupplier + injeksiAktif),
+      total_kewajiban: money(hutangSupplier + injeksiAktif + consignmentPayable),
     };
   }
 
@@ -117,7 +119,8 @@ export class FinancialReportService {
 
   async getConsignmentCombined(ctx: AuthContext) {
     this.requireReport(ctx);
-    return { warung: { payable: "0" }, brilink: { payable: "0" } };
+    const entries = await prisma.consignmentEntry.findMany({ where: { status: "ACTIVE" }, orderBy: { createdAt: "desc" } });
+    return { warung: entries.filter((entry) => entry.domain === "WARUNG"), brilink: entries.filter((entry) => entry.domain === "BRILINK") };
   }
 
   async getClosingDifferences(ctx: AuthContext) {

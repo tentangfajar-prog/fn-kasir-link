@@ -143,6 +143,13 @@ enum ClosingStatus {
   CANCELLED
 }
 
+enum ConsignmentStatus {
+  ACTIVE
+  SETTLED
+  RETURNED
+  CANCELLED
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -1013,6 +1020,64 @@ model BrilinkClosing {
   updatedAt             DateTime      @updatedAt
 
   @@unique([operationalDate, status])
+  @@index([operationalDate])
+}
+
+
+model ConsignmentEntry {
+  id                  String              @id @default(uuid())
+  domain              Domain
+  documentNo          String              @unique
+  operationalDate     DateTime            @db.Date
+  partnerId           String
+  partnerNameSnapshot String
+  itemName            String
+  qtyReceived         Decimal             @db.Decimal(18, 3)
+  qtySold             Decimal             @default(0) @db.Decimal(18, 3)
+  qtyReturned         Decimal             @default(0) @db.Decimal(18, 3)
+  qtyPaid             Decimal             @default(0) @db.Decimal(18, 3)
+  unitCostAmount      BigInt
+  status              ConsignmentStatus   @default(ACTIVE)
+  note                String?
+  createdBy           String
+  payments            ConsignmentPayment[]
+  returns             ConsignmentReturn[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([domain])
+  @@index([partnerId])
+  @@index([status])
+}
+
+model ConsignmentPayment {
+  id              String             @id @default(uuid())
+  entryId         String
+  entry           ConsignmentEntry   @relation(fields: [entryId], references: [id])
+  documentNo      String             @unique
+  operationalDate DateTime           @db.Date
+  qtyPaid         Decimal            @db.Decimal(18, 3)
+  amount          BigInt
+  note            String?
+  createdBy       String
+  createdAt       DateTime           @default(now())
+
+  @@index([entryId])
+  @@index([operationalDate])
+}
+
+model ConsignmentReturn {
+  id              String             @id @default(uuid())
+  entryId         String
+  entry           ConsignmentEntry   @relation(fields: [entryId], references: [id])
+  documentNo      String             @unique
+  operationalDate DateTime           @db.Date
+  qtyReturned     Decimal            @db.Decimal(18, 3)
+  note            String?
+  createdBy       String
+  createdAt       DateTime           @default(now())
+
+  @@index([entryId])
   @@index([operationalDate])
 }
 
