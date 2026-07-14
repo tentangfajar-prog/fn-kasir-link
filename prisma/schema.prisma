@@ -131,6 +131,13 @@ enum BrilinkTemporaryFundStatus {
   CANCELLED
 }
 
+enum AttendanceRecordStatus {
+  CHECKED_IN
+  CHECKED_OUT
+  CORRECTED
+  CANCELLED
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -146,6 +153,7 @@ model User {
   loginHistories     LoginHistory[]
   deviceHistories    DeviceHistory[]
   auditLogs          AuditLog[]               @relation("AuditActor")
+  attendanceRecords  AttendanceRecord[]
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
 
@@ -956,6 +964,70 @@ model BrilinkInjectionReturn {
 
   @@index([injectionId])
   @@index([operationalDate])
+}
+
+
+model AttendanceSetting {
+  id              String    @id @default(uuid())
+  name            String
+  latitude        Decimal   @db.Decimal(10, 7)
+  longitude       Decimal   @db.Decimal(10, 7)
+  radiusMeters    Int       @default(100)
+  qrTtlSeconds    Int       @default(60)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  @@index([isActive])
+}
+
+model AttendanceQrToken {
+  id          String    @id @default(uuid())
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+model AttendanceRecord {
+  id                String                  @id @default(uuid())
+  userId            String
+  user              User                    @relation(fields: [userId], references: [id])
+  attendanceDate    DateTime                @db.Date
+  checkInAt         DateTime?
+  checkInLatitude   Decimal?                @db.Decimal(10, 7)
+  checkInLongitude  Decimal?                @db.Decimal(10, 7)
+  checkInDistanceM  Int?
+  checkOutAt        DateTime?
+  checkOutLatitude  Decimal?                @db.Decimal(10, 7)
+  checkOutLongitude Decimal?                @db.Decimal(10, 7)
+  checkOutDistanceM Int?
+  status            AttendanceRecordStatus  @default(CHECKED_IN)
+  corrections       AttendanceCorrection[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@unique([userId, attendanceDate])
+  @@index([attendanceDate])
+  @@index([status])
+}
+
+model AttendanceCorrection {
+  id          String           @id @default(uuid())
+  recordId    String
+  record      AttendanceRecord @relation(fields: [recordId], references: [id])
+  reason      String
+  oldValue    Json
+  newValue    Json
+  correctedBy String
+  createdAt   DateTime         @default(now())
+
+  @@index([recordId])
+  @@index([correctedBy])
 }
 
 model AuditLog {
