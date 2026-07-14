@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "db:push": "prisma db push",
+    "check:sprint01": "tsx scripts/sprint01-self-check.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
@@ -35,6 +38,10 @@
     "postcss": "latest",
     "prisma": "^6.16.3",
     "tailwindcss": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "tsx": "latest"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

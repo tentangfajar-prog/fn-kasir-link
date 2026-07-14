@@ -13,11 +13,141 @@ enum Domain {
   BRILINK
 }
 
-model AuditLog {
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+model User {
+  id                 String                   @id @default(uuid())
+  name               String
+  username           String                   @unique
+  phone              String?
+  email              String?                  @unique
+  passwordHash       String
+  status             UserStatus               @default(ACTIVE)
+  mustChangePassword Boolean                  @default(false)
+  roleId             String
+  role               Role                     @relation(fields: [roleId], references: [id])
+  permissionOverrides UserPermissionOverride[]
+  loginHistories     LoginHistory[]
+  deviceHistories    DeviceHistory[]
+  auditLogs          AuditLog[]               @relation("AuditActor")
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  @@index([roleId])
+  @@index([status])
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  code        String           @unique
+  name        String
+  description String?
+  isSystem    Boolean          @default(true)
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String                   @id @default(uuid())
+  code        String                   @unique
+  name        String
+  domain      Domain
+  module      String
+  description String?
+  sensitive   Boolean                  @default(false)
+  roleLinks   RolePermission[]
+  overrides   UserPermissionOverride[]
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  @@index([domain, module])
+  @@index([sensitive])
+}
+
+model RolePermission {
+  id           String       @id @default(uuid())
+  roleId       String
+  permissionId String
+  effect       PermissionEffect @default(ALLOW)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission   @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model UserPermissionOverride {
+  id           String           @id @default(uuid())
+  userId       String
+  permissionId String
+  effect       PermissionEffect
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission       @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([userId, permissionId])
+  @@index([permissionId])
+}
+
+model LoginHistory {
   id        String   @id @default(uuid())
-  domain    Domain
-  action    String
-  actorId   String?
-  payload   Json?
+  userId    String?
+  username  String
+  success   Boolean
+  reason    String?
+  ipAddress String?
+  userAgent String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([username])
+  @@index([createdAt])
+}
+
+model DeviceHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  fingerprint String
+  ipAddress String?
+  userAgent String?
+  lastSeenAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([lastSeenAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  domain     Domain
+  module     String
+  action     String
+  entityType String?
+  entityId   String?
+  entityNo   String?
+  actorId    String?
+  oldValue   Json?
+  newValue   Json?
+  metadata   Json?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([domain, module])
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }

@@ -1,7 +1,11 @@
-import type { AuthContext } from "@/lib/auth";
+import type { Domain } from "@prisma/client";
+import { permissionService } from "@/services/permissions/permission-service";
+import type { AuthContext } from "@/types/auth";
 
-export type Domain = "WARUNG" | "BRILINK" | "GLOBAL";
+export function requireDomain(ctx: AuthContext, domain: Domain) {
+  return permissionService.requireDomain(ctx, domain);
+}
 
-export async function requireDomain(_context: AuthContext, _domain: Domain) {
-  throw new Error("Domain guard belum diimplementasikan. Sprint 01 scope.");
+export function canAccessDomain(ctx: AuthContext, domain: Domain) {
+  return permissionService.canAccessDomain(ctx, domain);
 }

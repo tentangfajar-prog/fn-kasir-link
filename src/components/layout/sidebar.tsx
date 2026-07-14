@@ -7,6 +7,8 @@ const navItems = [
   { href: "/laporan-keuangan", label: "Laporan Keuangan" },
   { href: "/absensi", label: "Absensi" },
   { href: "/pengaturan", label: "Pengaturan" },
+  { href: "/users", label: "User" },
+  { href: "/permissions", label: "Permission" },
 ];
 
 export function Sidebar() {
