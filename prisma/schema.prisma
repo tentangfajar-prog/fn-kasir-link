@@ -119,6 +119,18 @@ enum BrilinkTransactionStatus {
   CANCELLED
 }
 
+enum BrilinkFundAccount {
+  CASH
+  SALDO
+}
+
+enum BrilinkTemporaryFundStatus {
+  ACTIVE
+  PARTIAL
+  RETURNED
+  CANCELLED
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -866,6 +878,83 @@ model BrilinkFeeLedger {
 
   @@index([transactionId])
   @@index([sourceType, sourceId])
+  @@index([operationalDate])
+}
+
+
+model BrilinkDanaLuar {
+  id              String                      @id @default(uuid())
+  documentNo      String                      @unique
+  operationalDate DateTime                    @db.Date
+  borrowerName    String
+  sourceAccount   BrilinkFundAccount
+  principalAmount BigInt
+  returnedAmount  BigInt                      @default(0)
+  remainingAmount BigInt
+  status          BrilinkTemporaryFundStatus  @default(ACTIVE)
+  note            String?
+  createdBy       String
+  returns         BrilinkDanaLuarReturn[]
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  @@index([operationalDate])
+  @@index([sourceAccount])
+  @@index([status])
+}
+
+model BrilinkDanaLuarReturn {
+  id              String             @id @default(uuid())
+  danaLuarId      String
+  danaLuar        BrilinkDanaLuar    @relation(fields: [danaLuarId], references: [id])
+  documentNo      String             @unique
+  operationalDate DateTime           @db.Date
+  returnToAccount BrilinkFundAccount
+  amount          BigInt
+  note            String?
+  createdBy       String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([danaLuarId])
+  @@index([operationalDate])
+}
+
+model BrilinkInjection {
+  id                String                      @id @default(uuid())
+  documentNo        String                      @unique
+  operationalDate   DateTime                    @db.Date
+  fundProviderName  String
+  targetAccount     BrilinkFundAccount
+  principalAmount   BigInt
+  returnedAmount    BigInt                      @default(0)
+  remainingAmount   BigInt
+  status            BrilinkTemporaryFundStatus  @default(ACTIVE)
+  note              String?
+  createdBy         String
+  returns           BrilinkInjectionReturn[]
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  @@index([operationalDate])
+  @@index([targetAccount])
+  @@index([status])
+}
+
+model BrilinkInjectionReturn {
+  id              String             @id @default(uuid())
+  injectionId     String
+  injection       BrilinkInjection   @relation(fields: [injectionId], references: [id])
+  documentNo      String             @unique
+  operationalDate DateTime           @db.Date
+  returnFromAccount BrilinkFundAccount
+  amount          BigInt
+  note            String?
+  createdBy       String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([injectionId])
   @@index([operationalDate])
 }
 

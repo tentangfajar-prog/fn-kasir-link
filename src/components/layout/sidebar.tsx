@@ -14,6 +14,7 @@ const navItems = [
   { href: "/brilink", label: "BRILink" },
   { href: "/brilink/transactions", label: "Transaksi BRILink" },
   { href: "/brilink/tariffs", label: "Tarif BRILink" },
+  { href: "/brilink/temporary-funds", label: "Dana di Luar & Injeksi" },
   { href: "/laporan-keuangan", label: "Laporan Keuangan" },
   { href: "/absensi", label: "Absensi" },
   { href: "/pengaturan", label: "Pengaturan" },
