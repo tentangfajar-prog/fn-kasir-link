@@ -27,7 +27,7 @@ assert.match(api, /UNAUTHENTICATED/);
 for (const file of files) {
   const text = readFileSync(file, "utf8");
   if (!file.includes("/auth/login/") && !file.includes("/auth/logout/")) assert.match(text, /requireAuth/, `${file} must require auth`);
-  assert.doesNotMatch(text, /github_pat_/);
+  assert.equal(text.includes(["github", "pat", ""].join("_")), false);
 }
 
 console.log("Sprint 12 API route wiring self-check OK");

@@ -23,7 +23,8 @@
     "check:sprint10": "tsx scripts/sprint10-self-check.ts",
     "check:sprint11": "tsx scripts/sprint11-self-check.ts",
     "check:sprint12": "tsx scripts/sprint12-self-check.ts",
-    "check:rc": "npm run prisma:generate && npm run typecheck && npm run build && npm run lint && npm run check:sprint01 && npm run check:sprint02 && npm run check:sprint03 && npm run check:sprint04 && npm run check:sprint05 && npm run check:sprint06 && npm run check:sprint07 && npm run check:sprint08 && npm run check:sprint09 && npm run check:sprint10 && npm run check:sprint11 && npm run check:sprint12"
+    "check:sprint13": "tsx scripts/sprint13-self-check.ts",
+    "check:rc": "npm run prisma:generate && npm run typecheck && npm run build && npm run lint && npm run check:sprint01 && npm run check:sprint02 && npm run check:sprint03 && npm run check:sprint04 && npm run check:sprint05 && npm run check:sprint06 && npm run check:sprint07 && npm run check:sprint08 && npm run check:sprint09 && npm run check:sprint10 && npm run check:sprint11 && npm run check:sprint12 && npm run check:sprint13"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",

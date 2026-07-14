@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/components/domain/placeholder-page";
+import { ApiJsonForm } from "@/components/domain/api-json-form";
 
-export default function Page() {
-  return <PlaceholderPage title="Laporan Keuangan" description="Ringkasan keuangan Owner untuk matching Warung dan BRILink." />;
+export default function LaporanKeuanganPage() {
+  return <ApiJsonForm title="Laporan Keuangan" description="Laporan read-only aset, hutang, dana luar, injeksi, dan profit dari ledger." endpoint="/api/laporan-keuangan/summary" method="GET" />;
 }
