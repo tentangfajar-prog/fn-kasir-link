@@ -90,6 +90,11 @@ enum WarungCashAccount {
   KAS_AMAN
 }
 
+enum WarungFinanceStatus {
+  POSTED
+  CANCELLED
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -448,6 +453,7 @@ model WarungPaymentMethod {
   isActive  Boolean         @default(true)
   sortOrder Int             @default(0)
   sales     WarungSale[]
+  ledgers   WarungNonCashLedger[]
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   deletedAt DateTime?
@@ -506,6 +512,58 @@ model WarungSaleItem {
   @@index([stockProductId])
 }
 
+model WarungExpenseCategory {
+  id        String          @id @default(uuid())
+  name      String
+  code      String          @unique
+  isActive  Boolean         @default(true)
+  sortOrder Int             @default(0)
+  expenses  WarungExpense[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt DateTime?
+}
+
+model WarungExpense {
+  id                   String                @id @default(uuid())
+  documentNo           String                @unique
+  operationalDate      DateTime              @db.Date
+  account              WarungCashAccount
+  categoryId           String
+  category             WarungExpenseCategory @relation(fields: [categoryId], references: [id])
+  categoryNameSnapshot String
+  description          String
+  amount               BigInt
+  status               WarungFinanceStatus   @default(POSTED)
+  note                 String?
+  createdBy            String
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([operationalDate])
+  @@index([account])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model WarungCashTransfer {
+  id              String              @id @default(uuid())
+  documentNo      String              @unique
+  operationalDate DateTime            @db.Date
+  fromAccount     WarungCashAccount
+  toAccount       WarungCashAccount
+  amount          BigInt
+  status          WarungFinanceStatus @default(POSTED)
+  note            String?
+  createdBy       String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([operationalDate])
+  @@index([fromAccount, toAccount])
+  @@index([status])
+}
+
 model WarungCashLedger {
   id              String            @id @default(uuid())
   account         WarungCashAccount
@@ -527,6 +585,7 @@ model WarungCashLedger {
 model WarungNonCashLedger {
   id              String   @id @default(uuid())
   paymentMethodId String
+  paymentMethod   WarungPaymentMethod @relation(fields: [paymentMethodId], references: [id])
   direction       StockDirection
   amount          BigInt
   sourceType      String
