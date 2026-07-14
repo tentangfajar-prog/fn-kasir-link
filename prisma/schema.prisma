@@ -95,6 +95,18 @@ enum WarungFinanceStatus {
   CANCELLED
 }
 
+enum PurchasePaymentStatus {
+  PAID_CASH
+  SUPPLIER_DEBT
+}
+
+enum SupplierDebtStatus {
+  OPEN
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -321,6 +333,7 @@ model WarungStockProduct {
   stockMovements   WarungStockMovement[]
   saleItems        WarungSaleItem[]
   opnameItems      WarungStockOpnameItem[]
+  purchaseItems    WarungPurchaseItem[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   deletedAt        DateTime?
@@ -510,6 +523,90 @@ model WarungSaleItem {
   @@index([saleId])
   @@index([sellableItemId])
   @@index([stockProductId])
+}
+
+
+model WarungPurchase {
+  id                    String                @id @default(uuid())
+  documentNo            String                @unique
+  operationalDate       DateTime              @db.Date
+  partnerId             String
+  partnerNameSnapshot   String
+  paymentStatus         PurchasePaymentStatus
+  cashSource            WarungCashAccount?
+  subtotalAmount        BigInt
+  invoiceDiscountAmount BigInt                @default(0)
+  totalAmount           BigInt
+  status                WarungFinanceStatus   @default(POSTED)
+  note                  String?
+  createdBy             String
+  items                 WarungPurchaseItem[]
+  supplierDebt          WarungSupplierDebt?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([operationalDate])
+  @@index([partnerId])
+  @@index([paymentStatus])
+  @@index([status])
+}
+
+model WarungPurchaseItem {
+  id                       String             @id @default(uuid())
+  purchaseId               String
+  purchase                 WarungPurchase     @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  stockProductId           String
+  stockProduct             WarungStockProduct @relation(fields: [stockProductId], references: [id])
+  stockProductNameSnapshot String
+  qtyBase                  Decimal            @db.Decimal(18, 3)
+  unitPriceAmount          BigInt
+  discountAmount           BigInt             @default(0)
+  invoiceDiscountShare     BigInt             @default(0)
+  netAmount                BigInt
+  hppAmount                BigInt
+  createdAt                DateTime           @default(now())
+
+  @@index([purchaseId])
+  @@index([stockProductId])
+}
+
+model WarungSupplierDebt {
+  id                  String                         @id @default(uuid())
+  purchaseId          String                         @unique
+  purchase            WarungPurchase                 @relation(fields: [purchaseId], references: [id])
+  documentNo          String                         @unique
+  partnerId           String
+  partnerNameSnapshot String
+  principalAmount     BigInt
+  paidAmount          BigInt                         @default(0)
+  remainingAmount     BigInt
+  status              SupplierDebtStatus             @default(OPEN)
+  payments            WarungSupplierDebtPayment[]
+  createdBy           String
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+
+  @@index([partnerId])
+  @@index([status])
+}
+
+model WarungSupplierDebtPayment {
+  id              String             @id @default(uuid())
+  debtId          String
+  debt            WarungSupplierDebt @relation(fields: [debtId], references: [id])
+  documentNo      String             @unique
+  operationalDate DateTime           @db.Date
+  cashSource      WarungCashAccount
+  amount          BigInt
+  status          WarungFinanceStatus @default(POSTED)
+  note            String?
+  createdBy       String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([debtId])
+  @@index([operationalDate])
+  @@index([status])
 }
 
 model WarungExpenseCategory {

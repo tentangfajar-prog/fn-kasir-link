@@ -6,6 +6,8 @@ const navItems = [
   { href: "/warung/products", label: "Produk Warung" },
   { href: "/warung/sellable-items", label: "Item Jual Warung" },
   { href: "/warung/stock-opname", label: "Stock Opname Warung" },
+  { href: "/warung/purchases", label: "Pembelian Warung" },
+  { href: "/warung/debts", label: "Hutang Supplier Warung" },
   { href: "/warung/expenses", label: "Pengeluaran Warung" },
   { href: "/warung/cash-transfer", label: "Pindah Kas Warung" },
   { href: "/warung/finance", label: "Keuangan Warung" },
