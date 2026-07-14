@@ -67,6 +67,69 @@ async function main() {
     create: { domain: "BRILINK", code: "TRX", prefix: "BRI-" },
   });
 
+
+  const transferOutTemplate = await prisma.brilinkCashSaldoTemplate.upsert({
+    where: { code: "CASH_IN_SALDO_OUT" },
+    update: {
+      name: "Cash In Nominal + Fee, Saldo Out Nominal",
+      cashDirection: "IN",
+      cashAmountFormula: "NOMINAL_PLUS_FEE",
+      saldoDirection: "OUT",
+      saldoAmountFormula: "NOMINAL",
+    },
+    create: {
+      code: "CASH_IN_SALDO_OUT",
+      name: "Cash In Nominal + Fee, Saldo Out Nominal",
+      cashDirection: "IN",
+      cashAmountFormula: "NOMINAL_PLUS_FEE",
+      saldoDirection: "OUT",
+      saldoAmountFormula: "NOMINAL",
+    },
+  });
+
+  const cashOutTemplate = await prisma.brilinkCashSaldoTemplate.upsert({
+    where: { code: "CASH_OUT_SALDO_IN_FEE" },
+    update: {
+      name: "Cash Out Nominal, Cash In Fee, Saldo In Nominal",
+      cashDirection: "OUT",
+      cashAmountFormula: "NOMINAL",
+      saldoDirection: "IN",
+      saldoAmountFormula: "NOMINAL",
+    },
+    create: {
+      code: "CASH_OUT_SALDO_IN_FEE",
+      name: "Cash Out Nominal, Cash In Fee, Saldo In Nominal",
+      cashDirection: "OUT",
+      cashAmountFormula: "NOMINAL",
+      saldoDirection: "IN",
+      saldoAmountFormula: "NOMINAL",
+    },
+  });
+
+  const transactionTypes = [
+    { code: "TRANSFER", name: "Transfer", templateId: transferOutTemplate.id, sortOrder: 1 },
+    { code: "SETOR_TUNAI", name: "Setor Tunai", templateId: transferOutTemplate.id, sortOrder: 2 },
+    { code: "TARIK_TUNAI", name: "Tarik Tunai", templateId: cashOutTemplate.id, sortOrder: 3 },
+    { code: "TOP_UP", name: "Top Up", templateId: transferOutTemplate.id, sortOrder: 4 },
+  ];
+
+  for (const type of transactionTypes) {
+    const savedType = await prisma.brilinkTransactionType.upsert({
+      where: { code: type.code },
+      update: { name: type.name, templateId: type.templateId, sortOrder: type.sortOrder, isActive: true },
+      create: type,
+    });
+    const group = await prisma.brilinkTariffGroup.upsert({
+      where: { transactionTypeId_bankCategory: { transactionTypeId: savedType.id, bankCategory: "DEFAULT" } },
+      update: { name: "Default", isActive: true },
+      create: { transactionTypeId: savedType.id, bankCategory: "DEFAULT", name: "Default" },
+    });
+    const existing = await prisma.brilinkTariffRange.findFirst({ where: { tariffGroupId: group.id, minAmount: 0, maxAmount: null } });
+    if (!existing) {
+      await prisma.brilinkTariffRange.create({ data: { tariffGroupId: group.id, minAmount: 0, maxAmount: null, feeAmount: 5000 } });
+    }
+  }
+
   const ownerRole = await prisma.role.findUniqueOrThrow({ where: { code: "OWNER" } });
   const ownerPassword = process.env.SEED_OWNER_PASSWORD ?? "ChangeMe12345";
   await prisma.user.upsert({

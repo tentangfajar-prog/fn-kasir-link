@@ -12,6 +12,8 @@ const navItems = [
   { href: "/warung/cash-transfer", label: "Pindah Kas Warung" },
   { href: "/warung/finance", label: "Keuangan Warung" },
   { href: "/brilink", label: "BRILink" },
+  { href: "/brilink/transactions", label: "Transaksi BRILink" },
+  { href: "/brilink/tariffs", label: "Tarif BRILink" },
   { href: "/laporan-keuangan", label: "Laporan Keuangan" },
   { href: "/absensi", label: "Absensi" },
   { href: "/pengaturan", label: "Pengaturan" },

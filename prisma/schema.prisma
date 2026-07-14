@@ -107,6 +107,18 @@ enum SupplierDebtStatus {
   CANCELLED
 }
 
+enum BrilinkAmountFormula {
+  NONE
+  NOMINAL
+  FEE
+  NOMINAL_PLUS_FEE
+}
+
+enum BrilinkTransactionStatus {
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -694,6 +706,165 @@ model WarungNonCashLedger {
   createdAt       DateTime @default(now())
 
   @@index([paymentMethodId])
+  @@index([sourceType, sourceId])
+  @@index([operationalDate])
+}
+
+
+model BrilinkCashSaldoTemplate {
+  id                String               @id @default(uuid())
+  code              String               @unique
+  name              String
+  cashDirection     StockDirection?
+  cashAmountFormula BrilinkAmountFormula @default(NONE)
+  saldoDirection    StockDirection?
+  saldoAmountFormula BrilinkAmountFormula @default(NONE)
+  isActive          Boolean              @default(true)
+  transactionTypes  BrilinkTransactionType[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([isActive])
+}
+
+model BrilinkTransactionType {
+  id           String                    @id @default(uuid())
+  code         String                    @unique
+  name         String
+  templateId   String
+  template     BrilinkCashSaldoTemplate  @relation(fields: [templateId], references: [id])
+  isActive     Boolean                   @default(true)
+  sortOrder    Int                       @default(0)
+  tariffGroups BrilinkTariffGroup[]
+  transactions BrilinkTransaction[]
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([templateId])
+  @@index([isActive])
+}
+
+model BrilinkTariffGroup {
+  id                  String                 @id @default(uuid())
+  transactionTypeId   String
+  transactionType     BrilinkTransactionType @relation(fields: [transactionTypeId], references: [id])
+  name                String
+  bankCategory        String?
+  isActive            Boolean                @default(true)
+  ranges              BrilinkTariffRange[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@unique([transactionTypeId, bankCategory])
+  @@index([isActive])
+}
+
+model BrilinkTariffRange {
+  id            String             @id @default(uuid())
+  tariffGroupId String
+  tariffGroup   BrilinkTariffGroup @relation(fields: [tariffGroupId], references: [id])
+  minAmount     BigInt
+  maxAmount     BigInt?
+  feeAmount     BigInt
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([tariffGroupId])
+  @@index([minAmount, maxAmount])
+  @@index([isActive])
+}
+
+model BrilinkTransaction {
+  id                          String                   @id @default(uuid())
+  documentNo                  String                   @unique
+  operationalDate             DateTime                 @db.Date
+  transactionTypeId           String
+  transactionType             BrilinkTransactionType   @relation(fields: [transactionTypeId], references: [id])
+  transactionTypeNameSnapshot String
+  templateCodeSnapshot        String
+  bankCategory                String?
+  nominalAmount               BigInt
+  feeAmount                   BigInt
+  cashInAmount                BigInt                   @default(0)
+  cashOutAmount               BigInt                   @default(0)
+  saldoInAmount               BigInt                   @default(0)
+  saldoOutAmount              BigInt                   @default(0)
+  referenceNo                 String?
+  targetAccountNo             String?
+  targetPhoneNo               String?
+  targetName                  String?
+  providerName                String?
+  customerName                String?
+  status                      BrilinkTransactionStatus @default(COMPLETED)
+  note                        String?
+  createdBy                   String
+  cashLedgers                 BrilinkCashLedger[]
+  saldoLedgers                BrilinkSaldoLedger[]
+  feeLedgers                  BrilinkFeeLedger[]
+  createdAt                   DateTime                 @default(now())
+  updatedAt                   DateTime                 @updatedAt
+
+  @@index([operationalDate])
+  @@index([transactionTypeId])
+  @@index([status])
+  @@index([createdBy])
+}
+
+model BrilinkCashLedger {
+  id              String             @id @default(uuid())
+  transactionId   String?
+  transaction     BrilinkTransaction? @relation(fields: [transactionId], references: [id])
+  direction       StockDirection
+  amount          BigInt
+  sourceType      String
+  sourceId        String
+  documentNo      String
+  operationalDate DateTime           @db.Date
+  note            String?
+  createdBy       String
+  createdAt       DateTime           @default(now())
+
+  @@index([transactionId])
+  @@index([sourceType, sourceId])
+  @@index([operationalDate])
+}
+
+model BrilinkSaldoLedger {
+  id              String             @id @default(uuid())
+  transactionId   String?
+  transaction     BrilinkTransaction? @relation(fields: [transactionId], references: [id])
+  direction       StockDirection
+  amount          BigInt
+  sourceType      String
+  sourceId        String
+  documentNo      String
+  operationalDate DateTime           @db.Date
+  note            String?
+  createdBy       String
+  createdAt       DateTime           @default(now())
+
+  @@index([transactionId])
+  @@index([sourceType, sourceId])
+  @@index([operationalDate])
+}
+
+model BrilinkFeeLedger {
+  id              String             @id @default(uuid())
+  transactionId   String?
+  transaction     BrilinkTransaction? @relation(fields: [transactionId], references: [id])
+  direction       StockDirection
+  amount          BigInt
+  sourceType      String
+  sourceId        String
+  documentNo      String
+  operationalDate DateTime           @db.Date
+  note            String?
+  createdBy       String
+  createdAt       DateTime           @default(now())
+
+  @@index([transactionId])
   @@index([sourceType, sourceId])
   @@index([operationalDate])
 }

@@ -16,7 +16,8 @@
     "check:sprint03": "tsx scripts/sprint03-self-check.ts",
     "check:sprint04": "tsx scripts/sprint04-self-check.ts",
     "check:sprint05": "tsx scripts/sprint05-self-check.ts",
-    "check:sprint06": "tsx scripts/sprint06-self-check.ts"
+    "check:sprint06": "tsx scripts/sprint06-self-check.ts",
+    "check:sprint07": "tsx scripts/sprint07-self-check.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
