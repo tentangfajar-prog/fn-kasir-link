@@ -14,11 +14,14 @@ assert.equal(typeof packageJson.scripts["preflight:production"], "string");
 assert.equal(packageJson.scripts["check:rc"].includes("preflight:production"), true);
 assert.match(runbook, /Do not use `prisma db push` in production/);
 assert.match(runbook, /prisma migrate deploy/);
+assert.match(runbook, /npm run db:migrate:deploy/);
 assert.match(runbook, /Backup production database/);
 assert.match(smoke, /Kasir Warung cannot access BRILink/);
 assert.match(smoke, /Petugas BRILink cannot access Warung/);
 assert.match(envExample, /DATABASE_URL=/);
-assert.match(envExample, /SESSION_SECRET=/);
+assert.doesNotMatch(envExample, /SESSION_SECRET=/);
 assert.equal(remoteUrl.includes(tokenPattern), false);
+assert.equal(packageJson.scripts["db:migrate:deploy"], "prisma migrate deploy");
+assert.equal(packageJson.scripts["db:push"], undefined);
 
 console.log("Sprint 16 production prep self-check OK");

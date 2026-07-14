@@ -25,8 +25,8 @@ npm run preflight:production
 2. Backup production database.
 3. Pull release on staging first.
 4. Install dependencies.
-5. Run Prisma migration deploy.
-6. Run seed only if required and reviewed.
+5. Run Prisma migration deploy: `npm run db:migrate:deploy`.
+6. Run seed only if required and reviewed. Set `SEED_OWNER_PASSWORD` first in production.
 7. Start app.
 8. Run smoke test.
 9. Check audit log and error log.
@@ -35,7 +35,7 @@ npm run preflight:production
 ## Migration Command
 
 ```bash
-npx prisma migrate deploy
+npm run db:migrate:deploy
 ```
 
 ## Smoke Test

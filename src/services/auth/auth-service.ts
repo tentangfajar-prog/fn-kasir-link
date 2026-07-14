@@ -6,6 +6,7 @@ import { loginSchema, changePasswordSchema } from "@/lib/validations/auth";
 import type { AuthContext } from "@/types/auth";
 
 const encoder = new TextEncoder();
+const SCRYPT_KEY_LENGTH = 64;
 
 function randomToken(bytes = 16) {
   const data = new Uint8Array(bytes);
@@ -13,21 +14,32 @@ function randomToken(bytes = 16) {
   return Array.from(data, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function toHex(data: ArrayBuffer) {
+  return Array.from(new Uint8Array(data), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 async function sha256(value: string) {
-  const buffer = await globalThis.crypto.subtle.digest("SHA-256", encoder.encode(value));
-  return Array.from(new Uint8Array(buffer), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return toHex(await globalThis.crypto.subtle.digest("SHA-256", encoder.encode(value)));
+}
+
+async function scrypt(password: string, salt: string) {
+  const { scrypt: nodeScrypt } = await import("node:crypto");
+  return await new Promise<string>((resolve, reject) => {
+    nodeScrypt(password, salt, SCRYPT_KEY_LENGTH, (error, key) => (error ? reject(error) : resolve(key.toString("hex"))));
+  });
 }
 
 async function hashPassword(password: string) {
   const salt = randomToken();
-  const digest = await sha256(`${salt}:${password}`);
-  return `sha256:${salt}:${digest}`;
+  return `scrypt:${salt}:${await scrypt(password, salt)}`;
 }
 
 async function verifyPassword(password: string, storedHash: string) {
   const [algorithm, salt, digest] = storedHash.split(":");
-  if (algorithm !== "sha256" || !salt || !digest) return false;
-  return (await sha256(`${salt}:${password}`)) === digest;
+  if (!salt || !digest) return false;
+  if (algorithm === "scrypt") return (await scrypt(password, salt)) === digest;
+  if (algorithm === "sha256") return (await sha256(`${salt}:${password}`)) === digest;
+  return false;
 }
 
 export class AuthService {

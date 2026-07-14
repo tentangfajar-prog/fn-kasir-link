@@ -13,7 +13,10 @@ assert.equal(existsSync("docker-compose.example.yml"), true);
 assert.equal(existsSync("docs/10-release/Production-Runbook.md"), true);
 assert.equal(packageJson.scripts["check:rc"].includes("check:sprint16"), true);
 assert.equal(remoteUrl.includes(tokenPattern), false);
-assert.equal(packageJson.scripts["db:push"].includes("prisma db push"), true, "db:push exists for local dev only");
+assert.equal(packageJson.scripts["db:migrate:deploy"], "prisma migrate deploy");
+assert.equal(packageJson.scripts["db:push"], undefined, "production builds must not expose db:push; use db:push:dev locally");
+assert.equal(existsSync("prisma/migrations/20260714223000_initial/migration.sql"), true);
+assert.equal(existsSync("src/proxy.ts"), true);
 
 for (const file of trackedFiles) {
   if (file.endsWith(".png") || file.endsWith(".jpg") || file.endsWith(".jpeg") || file.endsWith(".gif") || file.endsWith(".webp")) continue;

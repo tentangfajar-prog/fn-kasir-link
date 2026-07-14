@@ -7,7 +7,6 @@ Recommended env vars:
 ```env
 DATABASE_URL=
 APP_URL=
-SESSION_SECRET=
 NODE_ENV=
 
 DEFAULT_TIMEZONE=Asia/Jakarta

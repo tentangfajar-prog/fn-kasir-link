@@ -131,7 +131,8 @@ async function main() {
   }
 
   const ownerRole = await prisma.role.findUniqueOrThrow({ where: { code: "OWNER" } });
-  const ownerPassword = process.env.SEED_OWNER_PASSWORD ?? "ChangeMe12345";
+  const ownerPassword = process.env.SEED_OWNER_PASSWORD ?? (process.env.NODE_ENV === "production" ? undefined : "ChangeMe12345");
+  if (!ownerPassword) throw new Error("SEED_OWNER_PASSWORD is required when seeding production.");
   await prisma.user.upsert({
     where: { username: "owner" },
     update: { roleId: ownerRole.id, status: "ACTIVE" },
