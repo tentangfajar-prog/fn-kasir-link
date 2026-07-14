@@ -49,6 +49,24 @@ async function main() {
     }
   }
 
+  await prisma.setting.upsert({
+    where: { scope_key: { scope: "GLOBAL", key: "app.name" } },
+    update: { value: "FN Kasir Link" },
+    create: { scope: "GLOBAL", key: "app.name", value: "FN Kasir Link" },
+  });
+
+  await prisma.documentSequence.upsert({
+    where: { domain_code: { domain: "WARUNG", code: "SALE" } },
+    update: { prefix: "WRG-" },
+    create: { domain: "WARUNG", code: "SALE", prefix: "WRG-" },
+  });
+
+  await prisma.documentSequence.upsert({
+    where: { domain_code: { domain: "BRILINK", code: "TRX" } },
+    update: { prefix: "BRI-" },
+    create: { domain: "BRILINK", code: "TRX", prefix: "BRI-" },
+  });
+
   const ownerRole = await prisma.role.findUniqueOrThrow({ where: { code: "OWNER" } });
   const ownerPassword = process.env.SEED_OWNER_PASSWORD ?? "ChangeMe12345";
   await prisma.user.upsert({

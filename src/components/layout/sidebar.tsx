@@ -9,6 +9,8 @@ const navItems = [
   { href: "/pengaturan", label: "Pengaturan" },
   { href: "/users", label: "User" },
   { href: "/permissions", label: "Permission" },
+  { href: "/partners", label: "Partner" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function Sidebar() {

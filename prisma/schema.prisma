@@ -23,6 +23,26 @@ enum PermissionEffect {
   DENY
 }
 
+enum PartnerType {
+  SUPPLIER
+  CONSIGNMENT
+  BOTH
+}
+
+enum PartnerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SettingScope {
+  GLOBAL
+  WARUNG
+  BRILINK
+  ABSENSI
+  PRINT
+  SYSTEM
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -129,6 +149,79 @@ model DeviceHistory {
 
   @@unique([userId, fingerprint])
   @@index([lastSeenAt])
+}
+
+model Partner {
+  id          String        @id @default(uuid())
+  name        String
+  phone       String?
+  address     String?
+  notes       String?
+  partnerType PartnerType
+  status      PartnerStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  @@index([partnerType, status])
+  @@index([name])
+}
+
+model Setting {
+  id        String       @id @default(uuid())
+  scope     SettingScope
+  key       String
+  value     Json
+  sensitive Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([scope, key])
+  @@index([scope])
+}
+
+model DocumentSequence {
+  id        String   @id @default(uuid())
+  domain    Domain
+  code      String
+  prefix    String
+  currentNo Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([domain, code])
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  domain     Domain
+  module     String
+  entityType String
+  entityId   String
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  storageKey String
+  createdAt  DateTime @default(now())
+
+  @@index([domain, module])
+  @@index([entityType, entityId])
+}
+
+model PrintLog {
+  id         String   @id @default(uuid())
+  domain     Domain
+  module     String
+  entityType String
+  entityId   String
+  entityNo   String?
+  actorId    String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([domain, module])
+  @@index([entityType, entityId])
+  @@index([actorId])
 }
 
 model AuditLog {
