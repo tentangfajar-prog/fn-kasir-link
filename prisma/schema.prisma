@@ -138,6 +138,11 @@ enum AttendanceRecordStatus {
   CANCELLED
 }
 
+enum ClosingStatus {
+  POSTED
+  CANCELLED
+}
+
 model User {
   id                 String                   @id @default(uuid())
   name               String
@@ -968,6 +973,63 @@ model BrilinkInjectionReturn {
 }
 
 
+
+
+model WarungClosing {
+  id                    String        @id @default(uuid())
+  documentNo            String        @unique
+  operationalDate       DateTime      @db.Date
+  systemCashLaciAmount  BigInt
+  actualCashLaciAmount  BigInt
+  differenceAmount      BigInt
+  setoranAmanAmount     BigInt
+  status                ClosingStatus @default(POSTED)
+  note                  String?
+  createdBy             String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@unique([operationalDate, status])
+  @@index([operationalDate])
+}
+
+model BrilinkClosing {
+  id                    String        @id @default(uuid())
+  documentNo            String        @unique
+  operationalDate       DateTime      @db.Date
+  systemCashAmount      BigInt
+  actualCashAmount      BigInt
+  cashDifferenceAmount  BigInt
+  systemSaldoAmount     BigInt
+  actualSaldoAmount     BigInt
+  saldoDifferenceAmount BigInt
+  feeAmount             BigInt
+  danaLuarAmount        BigInt
+  injectionAmount       BigInt
+  status                ClosingStatus @default(POSTED)
+  note                  String?
+  createdBy             String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@unique([operationalDate, status])
+  @@index([operationalDate])
+}
+
+model ReversalRecord {
+  id              String   @id @default(uuid())
+  documentNo      String   @unique
+  domain          Domain
+  sourceType      String
+  sourceId        String
+  reason          String
+  createdBy       String
+  createdAt       DateTime @default(now())
+
+  @@unique([domain, sourceType, sourceId])
+  @@index([domain])
+  @@index([sourceType, sourceId])
+}
 
 model ApiSession {
   id          String    @id @default(uuid())

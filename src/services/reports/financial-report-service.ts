@@ -122,7 +122,11 @@ export class FinancialReportService {
 
   async getClosingDifferences(ctx: AuthContext) {
     this.requireReport(ctx);
-    return { warung: [], brilink: [] };
+    const [warung, brilink] = await Promise.all([
+      prisma.warungClosing.findMany({ where: { status: "POSTED" }, orderBy: { operationalDate: "desc" } }),
+      prisma.brilinkClosing.findMany({ where: { status: "POSTED" }, orderBy: { operationalDate: "desc" } }),
+    ]);
+    return { warung, brilink };
   }
 
   private warungCashBalance(rows: WarungCashLedgerRow[], account: WarungCashAccount) {
