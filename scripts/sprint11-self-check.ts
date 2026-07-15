@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { PERMISSIONS, ROLE_PERMISSION_CODES } from "../src/services/permissions/permission-catalog";
 
 const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
@@ -43,6 +43,7 @@ const trackedText = trackedFiles.filter((file) => !file.endsWith(".png") && !fil
 const tokenPattern = ["github", "pat", ""].join("_");
 const knownServerPassword = ["Nurulaini20", "@$"].join("");
 for (const file of trackedText) {
+  if (!existsSync(file)) continue;
   const text = readFileSync(file, "utf8");
   assert.equal(text.includes(tokenPattern), false, `token pattern leaked in ${file}`);
   assert.equal(text.includes(knownServerPassword), false, `server password leaked in ${file}`);

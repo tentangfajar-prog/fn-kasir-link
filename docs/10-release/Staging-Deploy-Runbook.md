@@ -8,9 +8,9 @@ Status: **staging only — do not use production database**
 
 - Node.js 22+ or 24+
 - npm
-- PM2 or equivalent process runner
-- PostgreSQL 16+ staging database
-- Reverse proxy from `kasirlink.nairagroup.id` to app port `3000`
+- PM2, hPanel Node.js App, or equivalent process runner
+- MySQL/MariaDB database
+- hPanel Node.js App routing or reverse proxy from `kasirlink.nairagroup.id` to app port `3000`
 
 ## Required Env
 
@@ -18,9 +18,9 @@ Copy `.env.staging.example` to `.env` on staging server and fill real values.
 
 ```env
 NODE_ENV=production
-DATABASE_URL=postgresql://USER:***@HOST:5432/fn_kasir_link_staging
+DATABASE_URL=mysql://USER:***@localhost:3306/fn_kasir_link_staging
 NEXT_PUBLIC_APP_NAME=FN Kasir Link Staging
-UPLOAD_STORAGE_PATH=/app/storage/uploads
+UPLOAD_STORAGE_PATH=/home/u779371263/apps/fn-kasir-link/storage/uploads
 BARCODE_CAMERA_ENABLED=true
 SEED_OWNER_PASSWORD=replace-with-staging-owner-password
 ```

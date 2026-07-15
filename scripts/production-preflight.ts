@@ -14,18 +14,20 @@ assert.equal(existsSync("docs/10-release/Production-Runbook.md"), true);
 assert.equal(existsSync("docs/10-release/Staging-Deploy-Runbook.md"), true);
 assert.equal(existsSync(".env.staging.example"), true);
 assert.equal(existsSync("Dockerfile"), true);
-assert.equal(existsSync("vercel.json"), true);
-assert.equal(existsSync("docs/10-release/Vercel-Hosting.md"), true);
+assert.equal(existsSync("docs/10-release/Niagahoster-Hosting.md"), true);
+assert.match(readFileSync("prisma/schema.prisma", "utf8"), /provider = "mysql"/);
 assert.equal(packageJson.scripts["check:rc"].includes("check:sprint16"), true);
 assert.equal(packageJson.scripts["check:rc"].includes("preflight:staging"), true);
 assert.equal(remoteUrl.includes(tokenPattern), false);
 assert.equal(packageJson.scripts["start"], "node .next/standalone/server.js");
 assert.equal(packageJson.scripts["db:migrate:deploy"], "prisma migrate deploy");
 assert.equal(packageJson.scripts["db:push"], undefined, "production builds must not expose db:push; use db:push:dev locally");
-assert.equal(existsSync("prisma/migrations/20260714223000_initial/migration.sql"), true);
+assert.equal(existsSync("prisma/migrations/20260715030000_initial_mysql/migration.sql"), true);
+assert.match(readFileSync("prisma/migrations/migration_lock.toml", "utf8"), /provider = "mysql"/);
 assert.equal(existsSync("src/proxy.ts"), true);
 
 for (const file of trackedFiles) {
+  if (!existsSync(file)) continue;
   if (file.endsWith(".png") || file.endsWith(".jpg") || file.endsWith(".jpeg") || file.endsWith(".gif") || file.endsWith(".webp")) continue;
   const text = readFileSync(file, "utf8");
   assert.equal(text.includes(tokenPattern), false, `token pattern leaked in ${file}`);

@@ -12,9 +12,7 @@ export class PartnerService {
       deletedAt: null,
       ...(payload.partner_type ? { partnerType: payload.partner_type } : {}),
       ...(payload.status ? { status: payload.status } : {}),
-      ...(payload.keyword
-        ? { name: { contains: payload.keyword, mode: "insensitive" as const } }
-        : {}),
+      ...(payload.keyword ? { name: { contains: payload.keyword } } : {}),
     };
 
     const [items, total] = await Promise.all([
@@ -115,7 +113,7 @@ export class PartnerService {
         deletedAt: null,
         status: "ACTIVE",
         ...(type ? { partnerType: type } : {}),
-        name: { contains: q, mode: "insensitive" },
+        name: { contains: q },
       },
       orderBy: { name: "asc" },
       take: 20,
