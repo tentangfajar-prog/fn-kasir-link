@@ -7,8 +7,10 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
 ];
 
+const isVercel = process.env.VERCEL === "1";
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  ...(isVercel ? {} : { output: "standalone" as const }),
   experimental: {
     cpus: 1,
     workerThreads: false,

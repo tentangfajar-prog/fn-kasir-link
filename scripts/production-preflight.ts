@@ -14,6 +14,8 @@ assert.equal(existsSync("docs/10-release/Production-Runbook.md"), true);
 assert.equal(existsSync("docs/10-release/Staging-Deploy-Runbook.md"), true);
 assert.equal(existsSync(".env.staging.example"), true);
 assert.equal(existsSync("Dockerfile"), true);
+assert.equal(existsSync("vercel.json"), true);
+assert.equal(existsSync("docs/10-release/Vercel-Hosting.md"), true);
 assert.equal(packageJson.scripts["check:rc"].includes("check:sprint16"), true);
 assert.equal(packageJson.scripts["check:rc"].includes("preflight:staging"), true);
 assert.equal(remoteUrl.includes(tokenPattern), false);
