@@ -1,11 +1,10 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "npm run prisma:generate && npm run build"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "npm run db:migrate:deploy && npm start",
     "healthcheckPath": "/auth/login",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",

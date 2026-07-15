@@ -26,10 +26,13 @@ Notes:
 
 ## Deploy
 
-`railway.json` handles:
+`railway.json` now forces Dockerfile deploy, so Railway does not override commands with Nixpacks.
 
-- build: Railway installs dependencies, then runs `npm run prisma:generate && npm run build`
-- start: `npm run db:migrate:deploy && node .next/standalone/server.js`
+Dockerfile handles:
+
+- install: `npm ci`
+- build: `npm run prisma:generate && npm run build`
+- start: `npm run db:migrate:deploy && npm start`
 - healthcheck: `/auth/login`
 
 ## First Seed
