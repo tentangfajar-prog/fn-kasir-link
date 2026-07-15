@@ -12,4 +12,4 @@ RUN npm run prisma:generate && npm run build
 ENV NODE_ENV=production
 EXPOSE 3000
 
-CMD ["sh", "-c", "npm run db:migrate:deploy && npm start"]
+CMD ["npm", "start"]

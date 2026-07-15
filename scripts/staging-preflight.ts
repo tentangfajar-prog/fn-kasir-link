@@ -22,6 +22,6 @@ assert.match(runbook, /pm2 start ecosystem\.config\.cjs/);
 assert.match(runbook, /npm run db:migrate:deploy/);
 assert.match(runbook, /do not use production database/i);
 assert.match(readFileSync("railway.json", "utf8"), /DOCKERFILE/);
-assert.match(readFileSync("Dockerfile", "utf8"), /npm run db:migrate:deploy && npm start/);
+assert.match(readFileSync("Dockerfile", "utf8"), /CMD \["npm", "start"\]/);
 
 console.log("Staging preflight OK");

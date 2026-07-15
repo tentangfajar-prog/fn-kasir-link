@@ -32,8 +32,14 @@ Dockerfile handles:
 
 - install: `npm ci`
 - build: `npm run prisma:generate && npm run build`
-- start: `npm run db:migrate:deploy && npm start`
+- start: `npm start`
 - healthcheck: `/auth/login`
+
+Run migration separately after the web service is online:
+
+```bash
+npm run db:migrate:deploy
+```
 
 ## First Seed
 
