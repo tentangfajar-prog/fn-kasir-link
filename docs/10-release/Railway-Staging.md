@@ -28,7 +28,7 @@ Notes:
 
 `railway.json` handles:
 
-- build: `npm ci && npm run prisma:generate && npm run build`
+- build: Railway installs dependencies, then runs `npm run prisma:generate && npm run build`
 - start: `npm run db:migrate:deploy && node .next/standalone/server.js`
 - healthcheck: `/auth/login`
 
