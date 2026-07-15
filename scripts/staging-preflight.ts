@@ -13,6 +13,7 @@ assert.match(readFileSync("next.config.ts", "utf8"), /output:\s*["']standalone["
 assert.match(envExample, /DATABASE_URL=postgresql:\/\//);
 assert.match(envExample, /SEED_OWNER_PASSWORD=/);
 assert.doesNotMatch(envExample, /SESSION_SECRET=/);
+assert.equal(packageJson.scripts["start"], "node .next/standalone/server.js");
 assert.equal(packageJson.scripts["db:migrate:deploy"], "prisma migrate deploy");
 assert.equal(packageJson.scripts["db:push"], undefined);
 assert.match(runbook, /pm2 start ecosystem\.config\.cjs/);

@@ -16,6 +16,7 @@ assert.equal(existsSync(".env.staging.example"), true);
 assert.equal(packageJson.scripts["check:rc"].includes("check:sprint16"), true);
 assert.equal(packageJson.scripts["check:rc"].includes("preflight:staging"), true);
 assert.equal(remoteUrl.includes(tokenPattern), false);
+assert.equal(packageJson.scripts["start"], "node .next/standalone/server.js");
 assert.equal(packageJson.scripts["db:migrate:deploy"], "prisma migrate deploy");
 assert.equal(packageJson.scripts["db:push"], undefined, "production builds must not expose db:push; use db:push:dev locally");
 assert.equal(existsSync("prisma/migrations/20260714223000_initial/migration.sql"), true);
